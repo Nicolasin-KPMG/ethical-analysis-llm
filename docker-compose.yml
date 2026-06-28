@@ -34,6 +34,10 @@ services:
     volumes:
       # Monta el codigo para hot-reload en desarrollo.
       - ./backend:/app
+    # Permite alcanzar servicios del host (p. ej. Ollama en :11434) por
+    # host.docker.internal tambien en Linux/WSL.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       db:
         condition: service_healthy

@@ -14,3 +14,6 @@ npm-debug.log*
 
 # Datos locales
 pgdata/
+
+# Documento de contexto (work in progress, se versiona aparte por ahora)
+contexto_construccion_app.md
