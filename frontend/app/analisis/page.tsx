@@ -361,13 +361,6 @@ export default function Page() {
                           </li>
                         ))}
                       </Bloque>
-                      <Bloque titulo="Argumentos desde marcos éticos">
-                        {(c2?.argumentos_marcos_eticos ?? []).map((a, i) => (
-                          <li key={i}>
-                            <b>{a.marco}</b>: {a.argumento}
-                          </li>
-                        ))}
-                      </Bloque>
                     </div>
                   </details>
 

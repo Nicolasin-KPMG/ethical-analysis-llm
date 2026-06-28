@@ -68,15 +68,9 @@ class TensionValor(BaseModel):
     descripcion: str = ""
 
 
-class ArgumentoMarco(BaseModel):
-    marco: str = Field(description="Marco etico (p.ej. utilitarismo, deontologia, etica del cuidado).")
-    argumento: str = ""
-
-
 class Capa2Analisis(BaseModel):
     mapa_stakeholders: list[StakeholderItem] = []
     tensiones_de_valores: list[TensionValor] = []
-    argumentos_marcos_eticos: list[ArgumentoMarco] = []
 
 
 class OpcionTratamiento(BaseModel):

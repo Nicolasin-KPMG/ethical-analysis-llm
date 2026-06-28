@@ -258,7 +258,6 @@ export type Capas23 = {
   capa_2_analisis?: {
     mapa_stakeholders?: { stakeholder: string; interes?: string; impacto?: string }[];
     tensiones_de_valores?: { valor_a: string; valor_b: string; descripcion?: string }[];
-    argumentos_marcos_eticos?: { marco: string; argumento?: string }[];
   };
   capa_3_deliberacion?: {
     opciones_tratamiento?: { decision: string; justificacion?: string; pros?: string; contras?: string }[];
