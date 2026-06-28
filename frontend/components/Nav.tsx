@@ -11,10 +11,12 @@ import { useProyecto } from "./ProyectoContext";
 // Fases disponibles hasta M2. Las demas se agregaran en sus hitos.
 const FASES = [
   { href: "/", label: "Fase 1 · Requisitos" },
+  { href: "/analisis", label: "Fases 2-3 · Análisis" },
   { href: "/dimensiones", label: "Fase 4 · Dimensiones" },
   { href: "/evaluacion", label: "Fase 5 · Evaluación" },
   { href: "/ranking", label: "Fase 6 · Ranking" },
   { href: "/visualizacion", label: "Fase 8 · Visualización" },
+  { href: "/normas", label: "Normas" },
 ];
 
 export default function Nav() {

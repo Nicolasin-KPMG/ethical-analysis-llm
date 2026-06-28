@@ -205,3 +205,129 @@ export const obtenerVisualizacion = (proyectoId: string) =>
 // URL directa de descarga del CSV (se usa en un enlace <a>).
 export const urlExportCsv = (proyectoId: string) =>
   `${API_URL}/proyectos/${proyectoId}/visualizacion/export.csv`;
+
+// --- Documentos normativos y normas activas (M4/M5) ---
+
+export type Documento = {
+  id: string;
+  nombre: string;
+  jurisdiccion?: string | null;
+  version?: string | null;
+  fuente_url?: string | null;
+};
+
+export const listarDocumentos = () => request<Documento[]>("/documentos");
+
+export const crearDocumento = (data: {
+  nombre: string;
+  jurisdiccion?: string;
+}) =>
+  request<Documento>("/documentos", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+
+export const listarNormasActivas = (proyectoId: string) =>
+  request<Documento[]>(`/proyectos/${proyectoId}/normas-activas`);
+
+export const configurarNormasActivas = (
+  proyectoId: string,
+  documentoIds: string[],
+) =>
+  request<Documento[]>(`/proyectos/${proyectoId}/normas-activas`, {
+    method: "PUT",
+    body: JSON.stringify({ documento_ids: documentoIds }),
+  });
+
+// --- Fases 2-3: análisis ético y tratamiento (M5) ---
+
+export type Cita = { chunk_id?: string | null; texto_citado?: string | null };
+
+export type Tema = {
+  id?: string;
+  tema_etico: string;
+  actor_afectado?: string | null;
+  tipo_dano?: string | null;
+  norma_tensionada_texto?: string | null;
+  evidencia?: string | null;
+  citas: Cita[];
+};
+
+// Capas 2 y 3 se guardan como JSON; las tipamos de forma laxa para mostrarlas.
+export type Capas23 = {
+  capa_2_analisis?: {
+    mapa_stakeholders?: { stakeholder: string; interes?: string; impacto?: string }[];
+    tensiones_de_valores?: { valor_a: string; valor_b: string; descripcion?: string }[];
+    argumentos_marcos_eticos?: { marco: string; argumento?: string }[];
+  };
+  capa_3_deliberacion?: {
+    opciones_tratamiento?: { decision: string; justificacion?: string; pros?: string; contras?: string }[];
+    reformulaciones_propuestas?: { texto_propuesto: string; como_reduce_conflicto?: string }[];
+    requisitos_derivados_propuestos?: { nombre: string; descripcion?: string; obligatorio?: boolean }[];
+    preguntas_deliberativas?: string[];
+  };
+};
+
+export type Analisis = {
+  id: string;
+  requisito_id: string;
+  generado_por?: string | null;
+  modelo_usado?: string | null;
+  nivel_confianza?: string | null;
+  limitaciones?: string | null;
+  capas_2_3?: Capas23 | null;
+  creado_en?: string | null;
+  temas: Tema[];
+};
+
+export type Decision = "aceptar" | "reformular" | "mitigar" | "eliminar";
+
+export const analizarRequisito = (requisitoId: string) =>
+  request<Analisis>(`/requisitos/${requisitoId}/analizar`, { method: "POST" });
+
+// GET del análisis: devuelve null si el requisito aún no tiene análisis (404).
+export const obtenerAnalisis = async (
+  requisitoId: string,
+): Promise<Analisis | null> => {
+  const res = await fetch(`${API_URL}/requisitos/${requisitoId}/analisis`, {
+    cache: "no-store",
+  });
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`Error ${res.status}: ${await res.text()}`);
+  return res.json();
+};
+
+export const editarAnalisis = (
+  requisitoId: string,
+  data: {
+    nivel_confianza?: string;
+    limitaciones?: string;
+    capas_2_3?: Capas23;
+    temas?: Tema[];
+  },
+) =>
+  request<Analisis>(`/requisitos/${requisitoId}/analisis`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+
+export const crearTratamiento = (
+  requisitoId: string,
+  data: {
+    decision: Decision;
+    justificacion?: string;
+    responsable?: string;
+    nuevo_nombre?: string;
+    nueva_descripcion?: string;
+    derivados?: { nombre: string; descripcion?: string; obligatorio?: boolean }[];
+  },
+) =>
+  request<{
+    id: string;
+    decision: string;
+    nuevo_requisito_id?: string | null;
+    derivados_ids: string[];
+  }>(`/requisitos/${requisitoId}/tratamiento`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });

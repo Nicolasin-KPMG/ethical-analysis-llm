@@ -1,14 +1,16 @@
 """Proveedor de LLM enchufable.
 
 Interfaz unica `LLMProvider` con dos implementaciones:
-- `AnthropicLLM`: usa el SDK de Anthropic (Claude). Es el proveedor por defecto.
-- `LocalLLM`: usa un endpoint compatible con OpenAI (Ollama / vLLM) para correr offline.
+- `AnthropicLLM`: SDK de Anthropic (Claude). Proveedor por defecto. Usa "tool use"
+  para forzar una salida estructurada que cumpla el esquema (las tres capas).
+- `LocalLLM`: endpoint compatible con OpenAI (Ollama / vLLM), para correr offline.
+  Pide salida JSON y la parsea.
 
-Importante: en M0 el metodo `analyze` queda como esqueleto. El analisis real
-(Fases 2-3, con RAG y validacion del esquema de tres capas) se construye en M5.
-Aqui solo dejamos lista la interfaz y la seleccion por variables de entorno.
+`analyze` recibe un prompt y un JSON Schema; devuelve un dict que cumple el esquema.
+Los clientes se crean de forma perezosa para no exigir credenciales hasta usarlos.
 """
 
+import json
 from abc import ABC, abstractmethod
 
 from config import settings
@@ -19,47 +21,78 @@ class LLMProvider(ABC):
 
     @abstractmethod
     def analyze(self, prompt: str, schema: dict) -> dict:
-        """Recibe un prompt y un JSON Schema de salida; devuelve un dict validado.
-
-        En las Fases 2-3 esto producira el objeto de tres capas del contexto.
-        """
+        """Recibe un prompt y un JSON Schema de salida; devuelve un dict validado."""
         ...
 
 
 class AnthropicLLM(LLMProvider):
-    """LLM por defecto: Claude via SDK de Anthropic."""
+    """LLM por defecto: Claude via SDK de Anthropic, con salida estructurada."""
 
     def __init__(self) -> None:
         self.model = settings.anthropic_model
         self.api_key = settings.anthropic_api_key
-        # El cliente se crea de forma perezosa en analyze() para no exigir
-        # la API key mientras solo estemos en M0/M1.
+        self._client = None  # perezoso
+
+    def _get_client(self):
+        if self._client is None:
+            from anthropic import Anthropic
+
+            if not self.api_key:
+                raise RuntimeError("Falta ANTHROPIC_API_KEY para usar el LLM de Anthropic.")
+            self._client = Anthropic(api_key=self.api_key)
+        return self._client
 
     def analyze(self, prompt: str, schema: dict) -> dict:
-        # TODO (M5): instanciar anthropic.Anthropic(api_key=...), llamar a
-        # messages.create forzando salida estructurada contra `schema`,
-        # y devolver el dict validado.
-        raise NotImplementedError(
-            "AnthropicLLM.analyze se implementa en M5 (Fases 2-3)."
+        client = self._get_client()
+        # "tool use": definimos una herramienta cuyo input es el esquema deseado y
+        # forzamos al modelo a llamarla, asi su salida cumple el esquema.
+        herramienta = {
+            "name": "registrar_resultado",
+            "description": "Registra el resultado estructurado del analisis.",
+            "input_schema": schema,
+        }
+        msg = client.messages.create(
+            model=self.model,
+            max_tokens=4096,
+            tools=[herramienta],
+            tool_choice={"type": "tool", "name": "registrar_resultado"},
+            messages=[{"role": "user", "content": prompt}],
         )
+        for bloque in msg.content:
+            if bloque.type == "tool_use":
+                return bloque.input
+        raise RuntimeError("El modelo no devolvio una llamada a la herramienta.")
 
 
 class LocalLLM(LLMProvider):
-    """LLM local via endpoint compatible con OpenAI (Ollama / vLLM).
-
-    Stub por ahora: la interfaz y la seleccion estan listas, pero la llamada
-    real se implementa en M5 junto con el analizador.
-    """
+    """LLM local via endpoint compatible con OpenAI (Ollama / vLLM)."""
 
     def __init__(self) -> None:
         self.base_url = settings.local_llm_base_url
         self.model = settings.local_llm_model
+        self._client = None  # perezoso
+
+    def _get_client(self):
+        if self._client is None:
+            from openai import OpenAI
+
+            self._client = OpenAI(base_url=self.base_url, api_key="local")
+        return self._client
 
     def analyze(self, prompt: str, schema: dict) -> dict:
-        # TODO (M5): usar el cliente OpenAI apuntando a base_url (Ollama/vLLM).
-        raise NotImplementedError(
-            "LocalLLM.analyze se implementa en M5 (Fases 2-3)."
+        client = self._get_client()
+        # Pedimos JSON e incluimos el esquema en el prompt como guia.
+        prompt_json = (
+            prompt
+            + "\n\nResponde UNICAMENTE con un JSON valido que cumpla este JSON Schema:\n"
+            + json.dumps(schema, ensure_ascii=False)
         )
+        resp = client.chat.completions.create(
+            model=self.model,
+            messages=[{"role": "user", "content": prompt_json}],
+            response_format={"type": "json_object"},
+        )
+        return json.loads(resp.choices[0].message.content)
 
 
 def get_llm_provider() -> LLMProvider:

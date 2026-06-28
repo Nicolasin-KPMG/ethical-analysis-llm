@@ -20,6 +20,7 @@ from routers import (
     ranking,
     visualizacion,
     documentos,
+    fases23,
 )
 
 app = FastAPI(
@@ -70,3 +71,6 @@ app.include_router(visualizacion.router)
 
 # Router de M4 (documentos normativos y normas activas, para el RAG).
 app.include_router(documentos.router)
+
+# Router de M5 (Fases 2-3: analisis etico y tratamiento).
+app.include_router(fases23.router)

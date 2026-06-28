@@ -4,11 +4,15 @@ Herramienta web que sistematiza un método de 8 fases para gestionar las
 implicancias éticas de los requisitos de un proyecto de software con IA y
 priorizarlos. Ver [contexto_construccion_app.md](contexto_construccion_app.md).
 
-Estado actual: **M0 (setup), M1 (modelo de datos + Fase 1), M2 (Fases 4, 5 y 6:
-motor de priorización determinista), M3 (Fase 8: visualización + CSV) y M4 (RAG:
-ingesta, base vectorial y recuperación, a mano)**. Las Fases 2, 3 y 7 y las
-llamadas al LLM aún no están implementadas (sólo su estructura). La bandera ética
-es por ahora un placeholder gris hasta implementar las Fases 2-3.
+Estado actual: **M0 (setup), M1 (Fase 1), M2 (Fases 4-6: priorización determinista),
+M3 (Fase 8: visualización + CSV), M4 (RAG a mano) y M5 (Fases 2-3: análisis ético
+con LLM + RAG, las tres capas, y tratamiento)**. Falta la Fase 7 y el pulido (M6).
+
+Para correr el análisis real de las Fases 2-3 hace falta `ANTHROPIC_API_KEY`
+(LLM) y, para las citas normativas, un proveedor de embeddings activo + corpus
+ingerido; sin embeddings el análisis corre igual pero sin citas y con confianza
+baja. La bandera ética de la Fase 8 sigue como placeholder gris (se conectará al
+análisis en una iteración posterior).
 
 El RAG (M4) está completo a nivel de código y verificado offline (chunking por
 estructura legal + almacenamiento y búsqueda en pgvector). Para generar vectores

@@ -11,6 +11,16 @@ from schemas.evaluacion import EvaluacionUpsert, EvaluacionOut
 from schemas.ranking import RankingItem, RankingOut, SnapshotOut, DesgloseRanking
 from schemas.visualizacion import VisualizacionItem, VisualizacionOut
 from schemas.documento import DocumentoCreate, DocumentoOut, NormasActivasUpdate
+from schemas.analisis import (
+    AnalisisLLM,
+    PrimeraPasada,
+    AnalisisOut,
+    AnalisisUpdate,
+    TemaOut,
+    CitaOut,
+    TratamientoCreate,
+    TratamientoOut,
+)
 
 __all__ = [
     "ProyectoCreate",
@@ -32,4 +42,12 @@ __all__ = [
     "DocumentoCreate",
     "DocumentoOut",
     "NormasActivasUpdate",
+    "AnalisisLLM",
+    "PrimeraPasada",
+    "AnalisisOut",
+    "AnalisisUpdate",
+    "TemaOut",
+    "CitaOut",
+    "TratamientoCreate",
+    "TratamientoOut",
 ]
