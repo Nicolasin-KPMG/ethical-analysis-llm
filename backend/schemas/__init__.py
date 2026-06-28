@@ -10,6 +10,7 @@ from schemas.dimension import DimensionCreate, DimensionUpdate, DimensionOut
 from schemas.evaluacion import EvaluacionUpsert, EvaluacionOut
 from schemas.ranking import RankingItem, RankingOut, SnapshotOut, DesgloseRanking
 from schemas.visualizacion import VisualizacionItem, VisualizacionOut
+from schemas.documento import DocumentoCreate, DocumentoOut, NormasActivasUpdate
 
 __all__ = [
     "ProyectoCreate",
@@ -28,4 +29,7 @@ __all__ = [
     "DesgloseRanking",
     "VisualizacionItem",
     "VisualizacionOut",
+    "DocumentoCreate",
+    "DocumentoOut",
+    "NormasActivasUpdate",
 ]

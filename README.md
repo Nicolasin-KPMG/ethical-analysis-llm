@@ -5,10 +5,15 @@ implicancias éticas de los requisitos de un proyecto de software con IA y
 priorizarlos. Ver [contexto_construccion_app.md](contexto_construccion_app.md).
 
 Estado actual: **M0 (setup), M1 (modelo de datos + Fase 1), M2 (Fases 4, 5 y 6:
-motor de priorización determinista) y M3 (Fase 8: visualización del ranking con
-desglose, bandera ética y exportación CSV)**. Las Fases 2, 3 y 7, el RAG y las
+motor de priorización determinista), M3 (Fase 8: visualización + CSV) y M4 (RAG:
+ingesta, base vectorial y recuperación, a mano)**. Las Fases 2, 3 y 7 y las
 llamadas al LLM aún no están implementadas (sólo su estructura). La bandera ética
 es por ahora un placeholder gris hasta implementar las Fases 2-3.
+
+El RAG (M4) está completo a nivel de código y verificado offline (chunking por
+estructura legal + almacenamiento y búsqueda en pgvector). Para generar vectores
+reales necesita un proveedor de embeddings activo (Voyage con API key, u Ollama
+local) y los documentos normativos en texto; ver [backend/datos/](backend/datos/).
 
 ## Stack
 

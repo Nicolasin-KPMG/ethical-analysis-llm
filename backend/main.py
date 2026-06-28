@@ -19,6 +19,7 @@ from routers import (
     evaluaciones,
     ranking,
     visualizacion,
+    documentos,
 )
 
 app = FastAPI(
@@ -66,3 +67,6 @@ app.include_router(ranking.router)
 
 # Router de M3 (Fase 8, visualizacion).
 app.include_router(visualizacion.router)
+
+# Router de M4 (documentos normativos y normas activas, para el RAG).
+app.include_router(documentos.router)

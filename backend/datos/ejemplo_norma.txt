@@ -1,0 +1,22 @@
+Norma de ejemplo sobre sistemas de inteligencia artificial
+
+Considerando 1
+Los sistemas de inteligencia artificial deben respetar los derechos fundamentales
+de las personas y promover un uso confiable de la tecnología.
+
+Artículo 1. Privacidad y protección de datos personales
+Todo sistema de IA que trate datos personales debe garantizar la confidencialidad,
+la minimización de datos y el consentimiento informado de las personas afectadas.
+
+Artículo 2. No discriminación y equidad
+Los sistemas de IA no deben generar sesgos injustificados ni discriminación contra
+personas o grupos por motivos de género, origen, edad u otra condición protegida.
+
+Artículo 3. Transparencia y explicabilidad
+Las decisiones automatizadas que afecten significativamente a una persona deben
+poder explicarse en términos comprensibles, y la persona debe poder solicitar
+revisión humana.
+
+Artículo 4. Supervisión humana
+Debe existir supervisión humana efectiva sobre los sistemas de IA de alto riesgo,
+de modo que el ser humano conserve la decisión final.

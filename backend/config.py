@@ -28,6 +28,10 @@ class Settings(BaseSettings):
     embedding_model_hosted: str = "voyage-3"
     embedding_model_local: str = "intfloat/multilingual-e5-large"
     embedding_dim: int = 1024  # debe coincidir con el modelo elegido y con la columna VECTOR
+    # Credencial del proveedor hospedado (Voyage por defecto).
+    voyage_api_key: str = ""
+    # Endpoint local compatible con OpenAI para embeddings (Ollama / vLLM).
+    embedding_local_base_url: str = "http://localhost:11434/v1"
 
 
 # Instancia unica reutilizable en toda la app.
