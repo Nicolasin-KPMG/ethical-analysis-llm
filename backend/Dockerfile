@@ -7,9 +7,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# Dependencias del sistema necesarias para psycopg2 al compilar (libpq).
+# Dependencias del sistema: libpq para psycopg2 y poppler-utils para pdftotext
+# (conversion de los PDF normativos a texto antes de ingerirlos al RAG).
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends gcc libpq-dev \
+    && apt-get install -y --no-install-recommends gcc libpq-dev poppler-utils \
     && rm -rf /var/lib/apt/lists/*
 
 # Instala dependencias primero para aprovechar la cache de capas.
