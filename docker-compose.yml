@@ -1,0 +1,57 @@
+# Orquestacion local: base de datos + backend + frontend.
+# Levantar todo con: docker compose up --build
+
+services:
+  # PostgreSQL con la extension pgvector ya incluida en la imagen.
+  db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-tesis}
+    ports:
+      # Host 5433 -> contenedor 5432 (evita choque con un Postgres local en 5432).
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-tesis}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Backend FastAPI. Aplica migraciones al arrancar (ver entrypoint.sh).
+  backend:
+    build: ./backend
+    env_file:
+      - .env
+    environment:
+      # Asegura la URL correcta dentro de la red de compose aunque .env la omita.
+      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@db:5432/tesis}
+    ports:
+      # Host 8001 -> contenedor 8000 (evita choque con un servicio local en 8000).
+      - "8001:8000"
+    volumes:
+      # Monta el codigo para hot-reload en desarrollo.
+      - ./backend:/app
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # Frontend Next.js en modo desarrollo.
+  frontend:
+    build: ./frontend
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8001}
+    ports:
+      # Host 3001 -> contenedor 3000 (evita choque con un servicio local en 3000).
+      - "3001:3000"
+    volumes:
+      - ./frontend:/app
+      # Evita que node_modules del host pise los del contenedor.
+      - /app/node_modules
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:

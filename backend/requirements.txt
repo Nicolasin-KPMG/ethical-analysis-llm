@@ -1,0 +1,13 @@
+# Backend dependencies (pip + requirements.txt para mantenerlo simple y explicable).
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+sqlalchemy==2.0.36
+alembic==1.14.0
+psycopg2-binary==2.9.10      # driver de PostgreSQL
+pgvector==0.3.6              # tipo VECTOR para SQLAlchemy
+pydantic==2.10.4
+pydantic-settings==2.7.0     # carga de configuracion desde variables de entorno
+python-dotenv==1.0.1
+anthropic==0.42.0            # SDK del LLM por defecto (Claude)
+openai==1.59.2               # cliente compatible para LLM/embeddings locales (Ollama / vLLM)
+httpx==0.28.1

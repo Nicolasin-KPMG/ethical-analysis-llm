@@ -1,0 +1,16 @@
+# Entorno
+.env
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Node / Next.js
+node_modules/
+.next/
+npm-debug.log*
+*.tsbuildinfo
+
+# Datos locales
+pgdata/
