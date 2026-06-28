@@ -330,3 +330,43 @@ export const crearTratamiento = (
     method: "POST",
     body: JSON.stringify(data),
   });
+
+// --- Fase 7: trazabilidad de derivados (M6) ---
+
+export type TrazabilidadItem = {
+  relacion_id: string;
+  tipo_relacion?: string | null;
+  obligatorio?: boolean | null;
+  origen_codigo?: string | null;
+  origen_nombre: string;
+  origen_puntaje?: number | null;
+  origen_posicion?: number | null;
+  derivado_codigo?: string | null;
+  derivado_nombre: string;
+  derivado_puntaje?: number | null;
+  derivado_posicion?: number | null;
+  arrastre_violada: boolean;
+};
+
+export const listarTrazabilidad = (proyectoId: string) =>
+  request<{ proyecto_id: string; items: TrazabilidadItem[] }>(
+    `/proyectos/${proyectoId}/trazabilidad`,
+  );
+
+export const editarRelacion = (
+  relacionId: string,
+  data: { obligatorio?: boolean; tipo_relacion?: string },
+) =>
+  request<unknown>(`/relaciones/${relacionId}`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+
+export const eliminarRelacion = (relacionId: string) =>
+  fetch(`${API_URL}/relaciones/${relacionId}`, { method: "DELETE" }).then((res) => {
+    if (!res.ok) throw new Error(`Error ${res.status}`);
+  });
+
+// URL de descarga del export JSON del proyecto completo.
+export const urlExportProyecto = (proyectoId: string) =>
+  `${API_URL}/proyectos/${proyectoId}/export.json`;

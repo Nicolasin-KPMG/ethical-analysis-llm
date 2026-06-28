@@ -5,7 +5,7 @@ M2: dimensiones (Fase 4), evaluaciones (Fase 5), ranking (Fase 6).
 M3: visualizacion (Fase 8).
 M4: documentos (documentos normativos + normas activas, para el RAG).
 M5: fases23 (analisis etico + tratamiento, Fases 2-3).
-Los routers de las demas fases se agregan en sus hitos correspondientes.
+M6: relaciones (Fase 7: derivados y trazabilidad), export (exportacion del proyecto).
 """
 
 from routers import (
@@ -17,6 +17,8 @@ from routers import (
     visualizacion,
     documentos,
     fases23,
+    relaciones,
+    export,
 )
 
 __all__ = [
@@ -28,4 +30,6 @@ __all__ = [
     "visualizacion",
     "documentos",
     "fases23",
+    "relaciones",
+    "export",
 ]

@@ -21,6 +21,8 @@ from routers import (
     visualizacion,
     documentos,
     fases23,
+    relaciones,
+    export,
 )
 
 app = FastAPI(
@@ -74,3 +76,7 @@ app.include_router(documentos.router)
 
 # Router de M5 (Fases 2-3: analisis etico y tratamiento).
 app.include_router(fases23.router)
+
+# Routers de M6 (Fase 7: relaciones/trazabilidad; y exportacion del proyecto).
+app.include_router(relaciones.router)
+app.include_router(export.router)

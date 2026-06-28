@@ -15,6 +15,7 @@ const FASES = [
   { href: "/dimensiones", label: "Fase 4 · Dimensiones" },
   { href: "/evaluacion", label: "Fase 5 · Evaluación" },
   { href: "/ranking", label: "Fase 6 · Ranking" },
+  { href: "/trazabilidad", label: "Fase 7 · Derivados" },
   { href: "/visualizacion", label: "Fase 8 · Visualización" },
   { href: "/normas", label: "Normas" },
 ];

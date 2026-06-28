@@ -21,6 +21,14 @@ from schemas.analisis import (
     TratamientoCreate,
     TratamientoOut,
 )
+from schemas.relacion import (
+    RelacionCreate,
+    RelacionUpdate,
+    RelacionOut,
+    RequisitoMini,
+    TrazabilidadItem,
+    TrazabilidadOut,
+)
 
 __all__ = [
     "ProyectoCreate",
@@ -50,4 +58,10 @@ __all__ = [
     "CitaOut",
     "TratamientoCreate",
     "TratamientoOut",
+    "RelacionCreate",
+    "RelacionUpdate",
+    "RelacionOut",
+    "RequisitoMini",
+    "TrazabilidadItem",
+    "TrazabilidadOut",
 ]
