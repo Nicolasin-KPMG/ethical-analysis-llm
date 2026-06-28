@@ -12,7 +12,14 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from config import settings
-from routers import proyectos, requisitos, dimensiones, evaluaciones, ranking
+from routers import (
+    proyectos,
+    requisitos,
+    dimensiones,
+    evaluaciones,
+    ranking,
+    visualizacion,
+)
 
 app = FastAPI(
     title="Gestion etica y priorizacion de requisitos",
@@ -56,3 +63,6 @@ app.include_router(requisitos.router)
 app.include_router(dimensiones.router)
 app.include_router(evaluaciones.router)
 app.include_router(ranking.router)
+
+# Router de M3 (Fase 8, visualizacion).
+app.include_router(visualizacion.router)

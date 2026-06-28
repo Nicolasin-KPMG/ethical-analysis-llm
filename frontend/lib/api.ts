@@ -86,6 +86,20 @@ export type RankingOut = {
   items: RankingItem[];
 };
 
+// Bandera ética (Fase 8). Por ahora siempre "sin_analisis" (placeholder gris)
+// hasta implementar el análisis ético de las Fases 2-3.
+export type BanderaEtica = "verde" | "amarilla" | "roja" | "sin_analisis";
+
+export type VisualizacionItem = RankingItem & {
+  posicion: number;
+  bandera: BanderaEtica;
+};
+
+export type VisualizacionOut = {
+  proyecto_id: string;
+  items: VisualizacionItem[];
+};
+
 // Helper generico: hace fetch y lanza un error legible si la respuesta falla.
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, {
@@ -182,3 +196,12 @@ export const guardarSnapshot = (proyectoId: string) =>
   request<unknown>(`/proyectos/${proyectoId}/ranking/snapshot`, {
     method: "POST",
   });
+
+// --- Visualización (Fase 8) ---
+
+export const obtenerVisualizacion = (proyectoId: string) =>
+  request<VisualizacionOut>(`/proyectos/${proyectoId}/visualizacion`);
+
+// URL directa de descarga del CSV (se usa en un enlace <a>).
+export const urlExportCsv = (proyectoId: string) =>
+  `${API_URL}/proyectos/${proyectoId}/visualizacion/export.csv`;

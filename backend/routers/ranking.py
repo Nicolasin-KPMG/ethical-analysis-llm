@@ -11,37 +11,18 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import Proyecto, Dimension, EvaluacionDimension, Requisito, RankingSnapshot
+from models import Proyecto, RankingSnapshot
 from schemas import RankingOut, SnapshotOut
-from services.ranking import calcular_ranking
-from services.requisitos_query import requisitos_rankeables
+from services.ranking_query import ranking_de_proyecto
 
 router = APIRouter(prefix="/proyectos/{proyecto_id}/ranking", tags=["ranking"])
-
-
-def _calcular(proyecto_id: uuid.UUID, db: Session):
-    """Reune los datos del proyecto y delega en la funcion pura de ranking."""
-    requisitos = requisitos_rankeables(db, proyecto_id)
-    dimensiones = (
-        db.query(Dimension).filter(Dimension.proyecto_id == proyecto_id).all()
-    )
-    # Solo las evaluaciones de los requisitos rankeables.
-    ids_rankeables = [r.id for r in requisitos]
-    evaluaciones = (
-        db.query(EvaluacionDimension)
-        .filter(EvaluacionDimension.requisito_id.in_(ids_rankeables))
-        .all()
-        if ids_rankeables
-        else []
-    )
-    return calcular_ranking(requisitos, dimensiones, evaluaciones)
 
 
 @router.get("", response_model=RankingOut)
 def obtener_ranking(proyecto_id: uuid.UUID, db: Session = Depends(get_db)):
     if db.get(Proyecto, proyecto_id) is None:
         raise HTTPException(status_code=404, detail="Proyecto no encontrado")
-    items = _calcular(proyecto_id, db)
+    items = ranking_de_proyecto(db, proyecto_id)
     return {"proyecto_id": proyecto_id, "items": items}
 
 
@@ -51,7 +32,7 @@ def guardar_snapshot(proyecto_id: uuid.UUID, db: Session = Depends(get_db)):
     if db.get(Proyecto, proyecto_id) is None:
         raise HTTPException(status_code=404, detail="Proyecto no encontrado")
 
-    items = _calcular(proyecto_id, db)
+    items = ranking_de_proyecto(db, proyecto_id)
     snapshot = RankingSnapshot(proyecto_id=proyecto_id, datos={"items": items})
     db.add(snapshot)
     db.commit()
