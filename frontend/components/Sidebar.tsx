@@ -52,9 +52,9 @@ export default function Sidebar() {
                 <Link
                   href={it.href}
                   className={
-                    "group flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm transition " +
+                    "group relative flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm transition " +
                     (active
-                      ? "bg-ink-700/70 font-medium text-white"
+                      ? "bg-ink-700/70 font-medium text-white before:absolute before:-left-2 before:top-1.5 before:bottom-1.5 before:w-1 before:rounded-full before:bg-accent-400"
                       : "text-slate-400 hover:bg-ink-800 hover:text-slate-100")
                   }
                 >
