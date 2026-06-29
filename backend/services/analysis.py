@@ -52,21 +52,48 @@ def _prompt_pass1(req: Requisito) -> str:
         f"{SISTEMA}\n\n"
         "PRIMERA PASADA. Lee el requisito y propon:\n"
         "- temas_preliminares: posibles temas eticos que tensiona.\n"
-        "- consultas_rag: frases de busqueda para recuperar la normativa pertinente.\n\n"
+        "- consultas_rag: frases de busqueda para recuperar la normativa pertinente.\n"
+        "  Incluye consultas que apunten a DISPOSICIONES VINCULANTES concretas "
+        "(por ejemplo: clasificacion de alto riesgo en empleo, categorias especiales "
+        "de datos personales, decisiones automatizadas, obligaciones de transparencia), "
+        "no solo terminos generales del tema.\n\n"
         f"REQUISITO:\n{_texto_requisito(req)}"
     )
+
+
+# Conectores que delatan una REFERENCIA interna ("...del Reglamento", "del anexo de
+# la Recomendacion...") en vez de un encabezado real de articulo/anexo.
+_CONECTORES_REF = (
+    "del anexo", "de la recomendacion", "de la recomendación", "del reglamento",
+    "de la directiva", "apartado", "del presente", "de la ley", "del tratado",
+)
+
+
+def _es_vinculante(referencia) -> bool:
+    """True si la referencia parece una disposicion vinculante (articulo/anexo),
+    no un considerando ni una referencia interna. Sirve para priorizar citas."""
+    if not referencia:
+        return False
+    ref = referencia.strip().lower()
+    empieza = ref.startswith(("articulo", "artículo", "article", "art.", "anexo", "annex"))
+    if not empieza:
+        return False
+    return not any(c in ref for c in _CONECTORES_REF)
 
 
 def _prompt_pass2(req: Requisito, fragmentos: list[dict]) -> str:
     if fragmentos:
         ctx = "\n\n".join(
-            f"[chunk_id: {f['chunk_id']}] ({f['referencia'] or 's/ref'})\n{f['texto']}"
+            f"[chunk_id: {f['chunk_id']}] ({f['referencia'] or 's/ref'} — {f.get('tipo','contexto')})\n{f['texto']}"
             for f in fragmentos
         )
         nota_citas = (
             "Cita los fragmentos que respalden cada tema usando su chunk_id exacto "
-            "en el campo citas. Si una afirmacion no se apoya en ningun fragmento, "
-            "indica menor confianza."
+            "en el campo citas. PREFIERE citar fragmentos 'vinculante' (articulos, "
+            "anexos) sobre los 'contexto' (considerandos) cuando ambos apliquen. "
+            "En 'norma_tensionada_texto' nombra la norma y el ARTICULO/ANEXO concreto "
+            "(p. ej. 'EU AI Act, Anexo III(4)' o 'GDPR, Art. 9'), no una frase generica. "
+            "Si una afirmacion no se apoya en ningun fragmento, indica menor confianza."
         )
     else:
         ctx = "(No se recuperaron fragmentos normativos.)"
@@ -98,7 +125,11 @@ def _recuperar_fragmentos(db, req, consultas, embed_provider, k, max_total):
       relevante. Esto acota el contexto enviado al LLM (y el gasto de tokens).
     - Es tolerante a fallos: si no hay embeddings o el RAG esta vacio, devuelve [].
     """
-    mejores = {}  # chunk_id -> (distancia, fragmento)
+    # Pequeño "bono" de relevancia para disposiciones vinculantes: las acerca en
+    # el ranking frente a los considerandos, sin descartar estos del todo.
+    BONO_VINCULANTE = 0.05
+
+    mejores = {}  # chunk_id -> (score_efectivo, fragmento)
     for consulta in consultas or [req.nombre]:
         try:
             resultados = recuperar(
@@ -108,19 +139,22 @@ def _recuperar_fragmentos(db, req, consultas, embed_provider, k, max_total):
             # Embeddings no configurados / endpoint caido: seguimos sin citas.
             return []
         for chunk, dist in resultados:
+            vinculante = _es_vinculante(chunk.referencia)
+            score = dist - (BONO_VINCULANTE if vinculante else 0.0)
             previo = mejores.get(chunk.id)
-            if previo is None or dist < previo[0]:
+            if previo is None or score < previo[0]:
                 mejores[chunk.id] = (
-                    dist,
+                    score,
                     {
                         "chunk_id": str(chunk.id),
                         "referencia": chunk.referencia,
                         "texto": chunk.texto,
+                        "tipo": "vinculante" if vinculante else "contexto",
                     },
                 )
-    # Ordena por distancia ascendente (mas relevante primero) y corta al tope.
+    # Ordena por score (vinculantes priorizados) y corta al tope.
     ordenados = sorted(mejores.values(), key=lambda x: x[0])[:max_total]
-    return [frag for _dist, frag in ordenados]
+    return [frag for _score, frag in ordenados]
 
 
 def analizar_requisito(db, requisito_id, llm_provider=None, embed_provider=None, k=None, max_fragmentos=None):

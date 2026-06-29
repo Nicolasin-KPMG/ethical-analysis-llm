@@ -117,10 +117,22 @@ def chunquear_por_estructura(texto: str, max_palabras: int = MAX_PALABRAS_CHUNK)
         if buffer and any(l.strip() for l in buffer):
             unidades.append((ref_actual, "\n".join(buffer).strip()))
 
+    # Conectores que delatan una referencia interna, no un encabezado real.
+    conectores = (
+        "del anexo", "de la recomendaci", "del reglamento", "de la directiva",
+        "apartado", "del presente", "de la ley", "del tratado",
+    )
+
     for linea in lineas:
-        # Encabezado solo si ademas la linea es corta: evita falsos positivos por
-        # referencias internas ("artículo 26, apartado 10, del presente...").
-        if PATRON_ENCABEZADO.match(linea) and len(linea.strip()) <= 90:
+        l = linea.strip().lower()
+        # Encabezado solo si: matchea el patron, es una linea corta, y NO contiene
+        # conectores de referencia interna ("artículo 2 del anexo de la Recomendación...").
+        es_encabezado = (
+            PATRON_ENCABEZADO.match(linea)
+            and len(linea.strip()) <= 90
+            and not any(c in l for c in conectores)
+        )
+        if es_encabezado:
             cerrar()
             ref_actual = linea.strip()
             buffer = [linea]

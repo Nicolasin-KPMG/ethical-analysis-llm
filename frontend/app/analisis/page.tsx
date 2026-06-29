@@ -304,9 +304,10 @@ export default function Page() {
                                 value={t.tipo_dano ?? ""}
                                 onChange={(e) => setTema(i, "tipo_dano", e.target.value)}
                               />
-                              <input
-                                className="rounded border px-2 py-1 text-sm"
-                                placeholder="Norma tensionada"
+                              <textarea
+                                className="rounded border px-2 py-1 text-sm sm:col-span-2"
+                                rows={2}
+                                placeholder="Norma tensionada (norma + artículo concreto)"
                                 value={t.norma_tensionada_texto ?? ""}
                                 onChange={(e) => setTema(i, "norma_tensionada_texto", e.target.value)}
                               />
