@@ -20,6 +20,7 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from models import (
+    Proyecto,
     Requisito,
     AnalisisEtico,
     TemaEticoDetectado,
@@ -29,8 +30,21 @@ from models import (
 )
 from schemas import AnalisisOut, AnalisisUpdate, TratamientoCreate, TratamientoOut
 from services.analysis import analizar_requisito
+from services.bandera import bandera_de
 
 router = APIRouter(tags=["fases-2-3"])
+
+
+@router.get("/proyectos/{proyecto_id}/banderas")
+def banderas_proyecto(proyecto_id: uuid.UUID, db: Session = Depends(get_db)):
+    """Bandera ética (derivada del análisis) de cada requisito del proyecto.
+
+    La usa el dashboard para pintar el indicador de color por requisito.
+    """
+    if db.get(Proyecto, proyecto_id) is None:
+        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+    requisitos = db.query(Requisito).filter(Requisito.proyecto_id == proyecto_id).all()
+    return [{"requisito_id": str(r.id), "bandera": bandera_de(db, r)} for r in requisitos]
 
 
 # ---------------------------------------------------------------------------

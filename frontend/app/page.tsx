@@ -4,7 +4,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Requisito, listarRequisitos } from "../lib/api";
+import { Requisito, listarRequisitos, listarBanderas } from "../lib/api";
 import { useProyecto } from "../components/ProyectoContext";
 import {
   PageHeader,
@@ -17,21 +17,29 @@ import {
   th,
   td,
 } from "../components/ui";
-import { tipoBadge, estadoBadge, banderaEstado } from "../lib/estado";
+import { tipoBadge, estadoBadge, banderaEtica } from "../lib/estado";
 
 export default function Page() {
   const { proyectoId } = useProyecto();
   const [reqs, setReqs] = useState<Requisito[]>([]);
+  const [banderas, setBanderas] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    if (!proyectoId) return setReqs([]);
+    if (!proyectoId) {
+      setReqs([]);
+      setBanderas({});
+      return;
+    }
     listarRequisitos(proyectoId).then(setReqs).catch(() => setReqs([]));
+    listarBanderas(proyectoId)
+      .then((bs) => setBanderas(Object.fromEntries(bs.map((b) => [b.requisito_id, b.bandera]))))
+      .catch(() => setBanderas({}));
   }, [proyectoId]);
 
-  const vigentes = reqs.filter((r) => r.es_vigente !== false && r.estado !== "eliminado");
-  const tratados = reqs.filter((r) => r.estado === "mitigado" || r.estado === "reformulado");
-  const aceptados = reqs.filter((r) => r.estado === "aceptado");
-  const pendientes = vigentes.filter((r) => r.estado === "pendiente_de_analisis");
+  const vals = Object.values(banderas);
+  const rojas = vals.filter((x) => x === "roja").length;
+  const amarillas = vals.filter((x) => x === "amarilla").length;
+  const verdes = vals.filter((x) => x === "verde").length;
 
   return (
     <>
@@ -44,9 +52,9 @@ export default function Page() {
       {/* Métricas */}
       <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard label="Requisitos" value={reqs.length} hint="registrados" />
-        <StatCard label="Pendientes" value={pendientes.length} hint="por analizar" accent="slate" />
-        <StatCard label="Tratados" value={tratados.length} hint="mitigados / reformulados" accent="amber" />
-        <StatCard label="Aceptados" value={aceptados.length} hint="decisión tomada" accent="green" />
+        <StatCard label="Con bandera roja" value={rojas} hint="tensiones sin tratar" accent="red" />
+        <StatCard label="Tratadas" value={amarillas} hint="tensiones abordadas" accent="amber" />
+        <StatCard label="Sin implicancias" value={verdes} hint="éticas" accent="green" />
       </div>
 
       {/* Leyenda */}
@@ -55,10 +63,10 @@ export default function Page() {
           <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
             Bandera ética
           </span>
-          <span className="flex items-center gap-2"><Dot tone="slate" /> Pendiente</span>
-          <span className="flex items-center gap-2"><Dot tone="green" /> Aceptado</span>
-          <span className="flex items-center gap-2"><Dot tone="amber" /> Tratado</span>
-          <span className="flex items-center gap-2"><Dot tone="ink" /> Eliminado</span>
+          <span className="flex items-center gap-2"><Dot tone="green" /> Sin tensiones</span>
+          <span className="flex items-center gap-2"><Dot tone="amber" /> Tratadas</span>
+          <span className="flex items-center gap-2"><Dot tone="red" /> Sin tratar</span>
+          <span className="flex items-center gap-2"><Dot tone="slate" /> Sin análisis</span>
         </div>
       </Card>
 
@@ -86,7 +94,7 @@ export default function Page() {
           {reqs.map((r) => {
             const tb = tipoBadge(r.tipo);
             const eb = estadoBadge(r.estado);
-            const bn = banderaEstado(r.estado);
+            const bn = banderaEtica(banderas[r.id]);
             const archivado = r.es_vigente === false || r.estado === "eliminado";
             return (
               <tr key={r.id} className={"hover:bg-slate-50/60 " + (archivado ? "opacity-50" : "")}>

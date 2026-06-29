@@ -19,21 +19,20 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import Proyecto
+from models import Proyecto, Requisito
 from schemas import VisualizacionOut
 from services.ranking_query import ranking_de_proyecto
+from services.bandera import bandera_de
 
 router = APIRouter(prefix="/proyectos/{proyecto_id}/visualizacion", tags=["visualizacion"])
 
-# Placeholder mientras no exista el analisis etico (Fases 2-3).
-BANDERA_PLACEHOLDER = "sin_analisis"
-
 
 def _items_visualizacion(proyecto_id: uuid.UUID, db: Session):
-    """Toma el ranking y lo enriquece con posicion y bandera."""
+    """Toma el ranking y lo enriquece con posicion y la bandera etica real."""
     ranking = ranking_de_proyecto(db, proyecto_id)
     items = []
     for posicion, it in enumerate(ranking, start=1):
+        requisito = db.get(Requisito, uuid.UUID(it["requisito_id"]))
         items.append(
             {
                 "posicion": posicion,
@@ -42,7 +41,7 @@ def _items_visualizacion(proyecto_id: uuid.UUID, db: Session):
                 "nombre": it["nombre"],
                 "puntaje_final": it["puntaje_final"],
                 "desglose": it["desglose"],
-                "bandera": BANDERA_PLACEHOLDER,
+                "bandera": bandera_de(db, requisito) if requisito else "sin_analisis",
             }
         )
     return items

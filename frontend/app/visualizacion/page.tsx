@@ -42,9 +42,12 @@ export default function Page() {
       {error && <Alert>{error}</Alert>}
 
       <Card className="mb-6">
-        <div className="flex items-center gap-3 px-5 py-3 text-sm text-slate-600">
-          <Dot tone="slate" />
-          La bandera ética está en gris (“sin análisis ético aún”). Se activará al conectar las Fases 2-3.
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 px-5 py-3 text-sm text-slate-600">
+          <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Bandera ética</span>
+          <span className="flex items-center gap-2"><Dot tone="green" /> Sin tensiones</span>
+          <span className="flex items-center gap-2"><Dot tone="amber" /> Tratadas</span>
+          <span className="flex items-center gap-2"><Dot tone="red" /> Sin tratar</span>
+          <span className="flex items-center gap-2"><Dot tone="slate" /> Sin análisis</span>
         </div>
       </Card>
 

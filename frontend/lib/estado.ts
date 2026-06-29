@@ -32,6 +32,22 @@ export function tipoBadge(tipo?: string | null): { label: string; tone: Tone } {
   }
 }
 
+// Bandera ÉTICA real (derivada del análisis), para el dashboard y la Fase 8.
+export function banderaEtica(
+  b?: string | null,
+): { label: string; tone: DotTone } {
+  switch (b) {
+    case "verde":
+      return { label: "Sin tensiones éticas", tone: "green" };
+    case "amarilla":
+      return { label: "Tensiones tratadas", tone: "amber" };
+    case "roja":
+      return { label: "Tensiones sin tratar", tone: "red" };
+    default:
+      return { label: "Sin análisis aún", tone: "slate" };
+  }
+}
+
 // "Bandera" del dashboard derivada del estado (la ética fina llega con Fases 2-3).
 export function banderaEstado(estado?: string | null): { label: string; tone: DotTone } {
   switch (estado) {

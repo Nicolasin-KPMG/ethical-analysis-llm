@@ -370,3 +370,10 @@ export const eliminarRelacion = (relacionId: string) =>
 // URL de descarga del export JSON del proyecto completo.
 export const urlExportProyecto = (proyectoId: string) =>
   `${API_URL}/proyectos/${proyectoId}/export.json`;
+
+// --- Banderas éticas por requisito (derivadas del análisis) ---
+
+export type BanderaReq = { requisito_id: string; bandera: BanderaEtica };
+
+export const listarBanderas = (proyectoId: string) =>
+  request<BanderaReq[]>(`/proyectos/${proyectoId}/banderas`);
