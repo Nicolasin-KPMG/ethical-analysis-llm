@@ -17,9 +17,11 @@ class Settings(BaseSettings):
     database_url: str = "postgresql://postgres:postgres@db:5432/tesis"
 
     # --- Proveedor de LLM ---
-    llm_provider: str = "anthropic"  # "anthropic" | "local"
+    llm_provider: str = "anthropic"  # "anthropic" | "openai" | "local"
     anthropic_api_key: str = ""
     anthropic_model: str = "claude-sonnet-4-6"
+    openai_api_key: str = ""
+    openai_model: str = "gpt-4o-mini"
     local_llm_base_url: str = "http://localhost:11434/v1"
     local_llm_model: str = "llama3.1:8b"
 

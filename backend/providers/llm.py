@@ -64,6 +64,42 @@ class AnthropicLLM(LLMProvider):
         raise RuntimeError("El modelo no devolvio una llamada a la herramienta.")
 
 
+class OpenAILLM(LLMProvider):
+    """LLM via API de OpenAI (GPT). Pieza independiente de los embeddings:
+    se puede combinar con embeddings locales de Ollama sin re-indexar.
+    """
+
+    def __init__(self) -> None:
+        self.model = settings.openai_model
+        self.api_key = settings.openai_api_key
+        self._client = None  # perezoso
+
+    def _get_client(self):
+        if self._client is None:
+            from openai import OpenAI
+
+            if not self.api_key:
+                raise RuntimeError("Falta OPENAI_API_KEY para usar el LLM de OpenAI.")
+            self._client = OpenAI(api_key=self.api_key)
+        return self._client
+
+    def analyze(self, prompt: str, schema: dict) -> dict:
+        client = self._get_client()
+        # Pedimos salida JSON; incluimos el esquema en el prompt como guia y
+        # validamos despues con Pydantic en la capa de servicio.
+        prompt_json = (
+            prompt
+            + "\n\nResponde UNICAMENTE con un JSON valido que cumpla este JSON Schema:\n"
+            + json.dumps(schema, ensure_ascii=False)
+        )
+        resp = client.chat.completions.create(
+            model=self.model,
+            messages=[{"role": "user", "content": prompt_json}],
+            response_format={"type": "json_object"},
+        )
+        return json.loads(resp.choices[0].message.content)
+
+
 class LocalLLM(LLMProvider):
     """LLM local via endpoint compatible con OpenAI (Ollama / vLLM)."""
 
@@ -97,6 +133,8 @@ class LocalLLM(LLMProvider):
 
 def get_llm_provider() -> LLMProvider:
     """Devuelve la implementacion de LLM segun LLM_PROVIDER."""
+    if settings.llm_provider == "openai":
+        return OpenAILLM()
     if settings.llm_provider == "local":
         return LocalLLM()
     return AnthropicLLM()
