@@ -63,25 +63,64 @@ def limpiar_texto(texto: str) -> str:
     return re.sub(r"\n{3,}", "\n\n", "\n".join(lineas)).strip()
 
 
-def chunquear_por_estructura(texto: str):
-    """Divide el texto en fragmentos por unidad legal.
+# Tope de tamaño por fragmento (en palabras). Acota la granularidad de
+# articulos/secciones muy largos y evita superar el limite del modelo de
+# embeddings (bge-m3 ~8k tokens). Un valor chico mejora la precision de las citas.
+MAX_PALABRAS_CHUNK = 400
+
+
+def _subdividir(texto: str, max_palabras: int):
+    """Parte un texto largo en trozos de <= max_palabras, respetando parrafos.
+
+    Si un parrafo por si solo excede el tope, se corta por palabras.
+    """
+    parrafos = [p for p in texto.split("\n\n") if p.strip()]
+    trozos, actual, cuenta = [], [], 0
+
+    def emitir():
+        if actual:
+            trozos.append("\n\n".join(actual).strip())
+
+    for p in parrafos:
+        n = len(p.split())
+        if n > max_palabras:
+            # Parrafo gigante: lo cerramos y lo cortamos por palabras.
+            emitir()
+            actual, cuenta = [], 0
+            palabras = p.split()
+            for i in range(0, len(palabras), max_palabras):
+                trozos.append(" ".join(palabras[i : i + max_palabras]))
+        elif cuenta + n > max_palabras:
+            emitir()
+            actual, cuenta = [p], n
+        else:
+            actual.append(p)
+            cuenta += n
+    emitir()
+    return trozos or [texto.strip()]
+
+
+def chunquear_por_estructura(texto: str, max_palabras: int = MAX_PALABRAS_CHUNK):
+    """Divide el texto en fragmentos por unidad legal, con tope de tamaño.
 
     Devuelve una lista de tuplas (referencia, texto_fragmento). La referencia es
-    el encabezado detectado (p.ej. "Artículo 5"). Si no hay encabezados, hace un
-    unico fragmento con todo el texto.
+    el encabezado detectado (p.ej. "Artículo 5"). Si una unidad es muy larga (o el
+    documento no tiene encabezados, como el NIST), se subdivide por tamaño; en ese
+    caso la referencia lleva un sufijo "(parte k)".
     """
     lineas = texto.splitlines()
-    fragmentos = []
+    unidades = []  # (referencia, texto) antes de aplicar el tope de tamaño
     ref_actual = None
     buffer: list[str] = []
 
     def cerrar():
         if buffer and any(l.strip() for l in buffer):
-            fragmentos.append((ref_actual, "\n".join(buffer).strip()))
+            unidades.append((ref_actual, "\n".join(buffer).strip()))
 
     for linea in lineas:
-        if PATRON_ENCABEZADO.match(linea):
-            # Empieza una nueva unidad: cierra la anterior.
+        # Encabezado solo si ademas la linea es corta: evita falsos positivos por
+        # referencias internas ("artículo 26, apartado 10, del presente...").
+        if PATRON_ENCABEZADO.match(linea) and len(linea.strip()) <= 90:
             cerrar()
             ref_actual = linea.strip()
             buffer = [linea]
@@ -89,9 +128,20 @@ def chunquear_por_estructura(texto: str):
             buffer.append(linea)
     cerrar()
 
-    # Sin encabezados detectados: todo como un solo fragmento.
-    if not fragmentos and texto.strip():
-        fragmentos = [(None, texto.strip())]
+    # Sin encabezados detectados: todo como una sola unidad.
+    if not unidades and texto.strip():
+        unidades = [(None, texto.strip())]
+
+    # Aplica el tope de tamaño: subdivide las unidades largas.
+    fragmentos = []
+    for ref, cuerpo in unidades:
+        if len(cuerpo.split()) <= max_palabras:
+            fragmentos.append((ref, cuerpo))
+        else:
+            partes = _subdividir(cuerpo, max_palabras)
+            for k, parte in enumerate(partes, start=1):
+                ref_parte = f"{ref} (parte {k})" if ref else None
+                fragmentos.append((ref_parte, parte))
     return fragmentos
 
 

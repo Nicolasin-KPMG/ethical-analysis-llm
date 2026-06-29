@@ -17,3 +17,9 @@ pgdata/
 
 # Documento de contexto (work in progress, se versiona aparte por ahora)
 contexto_construccion_app.md
+
+# Corpus normativo (datos pesados / derivados): no se versiona.
+# Se conserva el ejemplo y el README de la carpeta.
+backend/datos/*.pdf
+backend/datos/*.txt
+!backend/datos/ejemplo_norma.txt
