@@ -24,6 +24,7 @@ from schemas.analisis import AnalisisLLM, PrimeraPasada
 from providers.llm import get_llm_provider
 from providers.embeddings import get_embedding_provider
 from rag.retrieve import recuperar
+from config import settings
 
 # Instrucciones base del analizador. Resume el rol y las reglas del metodo.
 SISTEMA = (
@@ -89,13 +90,15 @@ def _prompt_pass2(req: Requisito, fragmentos: list[dict]) -> str:
     )
 
 
-def _recuperar_fragmentos(db, req, consultas, embed_provider, k):
-    """Recupera y deduplica fragmentos para varias consultas.
+def _recuperar_fragmentos(db, req, consultas, embed_provider, k, max_total):
+    """Recupera fragmentos para varias consultas, deduplica y deja los mejores.
 
-    Es tolerante a fallos: si no hay proveedor de embeddings disponible o el RAG
-    esta vacio, devuelve [] en vez de romper (asi se puede probar el LLM solo).
+    - Por cada chunk repetido conserva la menor distancia (mas parecido).
+    - Devuelve como mucho `max_total` fragmentos, ordenados de mas a menos
+      relevante. Esto acota el contexto enviado al LLM (y el gasto de tokens).
+    - Es tolerante a fallos: si no hay embeddings o el RAG esta vacio, devuelve [].
     """
-    vistos = {}
+    mejores = {}  # chunk_id -> (distancia, fragmento)
     for consulta in consultas or [req.nombre]:
         try:
             resultados = recuperar(
@@ -104,22 +107,34 @@ def _recuperar_fragmentos(db, req, consultas, embed_provider, k):
         except Exception:
             # Embeddings no configurados / endpoint caido: seguimos sin citas.
             return []
-        for chunk, _dist in resultados:
-            vistos[chunk.id] = {
-                "chunk_id": str(chunk.id),
-                "referencia": chunk.referencia,
-                "texto": chunk.texto,
-            }
-    return list(vistos.values())
+        for chunk, dist in resultados:
+            previo = mejores.get(chunk.id)
+            if previo is None or dist < previo[0]:
+                mejores[chunk.id] = (
+                    dist,
+                    {
+                        "chunk_id": str(chunk.id),
+                        "referencia": chunk.referencia,
+                        "texto": chunk.texto,
+                    },
+                )
+    # Ordena por distancia ascendente (mas relevante primero) y corta al tope.
+    ordenados = sorted(mejores.values(), key=lambda x: x[0])[:max_total]
+    return [frag for _dist, frag in ordenados]
 
 
-def analizar_requisito(db, requisito_id, llm_provider=None, embed_provider=None, k=6):
+def analizar_requisito(db, requisito_id, llm_provider=None, embed_provider=None, k=None, max_fragmentos=None):
     """Ejecuta el analisis completo de un requisito y lo persiste.
+
+    `k` (fragmentos por consulta) y `max_fragmentos` (tope total) controlan cuanto
+    contexto normativo se inyecta; por defecto vienen de la configuracion (.env).
 
     Devuelve el AnalisisEtico creado (con sus temas y citas ya guardados).
     """
     llm = llm_provider or get_llm_provider()
     embed = embed_provider or get_embedding_provider()
+    k = k if k is not None else settings.rag_k_por_consulta
+    max_fragmentos = max_fragmentos if max_fragmentos is not None else settings.rag_max_fragmentos
 
     req = db.get(Requisito, requisito_id)
     if req is None:
@@ -128,8 +143,8 @@ def analizar_requisito(db, requisito_id, llm_provider=None, embed_provider=None,
     # 1) Primera pasada.
     pass1 = PrimeraPasada(**llm.analyze(_prompt_pass1(req), PrimeraPasada.model_json_schema()))
 
-    # 2) Recuperacion RAG.
-    fragmentos = _recuperar_fragmentos(db, req, pass1.consultas_rag, embed, k)
+    # 2) Recuperacion RAG (acotada por k y por el tope total de fragmentos).
+    fragmentos = _recuperar_fragmentos(db, req, pass1.consultas_rag, embed, k, max_fragmentos)
 
     # 3) Segunda pasada (las tres capas).
     pass2 = AnalisisLLM(**llm.analyze(_prompt_pass2(req, fragmentos), AnalisisLLM.model_json_schema()))

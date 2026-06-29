@@ -33,6 +33,12 @@ class Settings(BaseSettings):
     # Endpoint local compatible con OpenAI para embeddings (Ollama / vLLM).
     embedding_local_base_url: str = "http://localhost:11434/v1"
 
+    # --- RAG (recuperacion) ---
+    # Controlan cuanto contexto normativo se inyecta al analisis (Fases 2-3) y,
+    # por tanto, el gasto de tokens del LLM.
+    rag_k_por_consulta: int = 4   # fragmentos a recuperar por cada consulta del LLM
+    rag_max_fragmentos: int = 10  # tope total de fragmentos enviados al analisis
+
 
 # Instancia unica reutilizable en toda la app.
 settings = Settings()
