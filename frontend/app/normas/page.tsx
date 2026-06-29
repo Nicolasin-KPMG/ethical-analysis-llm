@@ -1,8 +1,6 @@
 "use client";
 
-// Documentos normativos y normas activas por proyecto (apoyo al RAG, regla 9).
-// Por defecto un proyecto contrasta contra TODAS las normas; aquí se puede acotar
-// el conjunto activo con checkboxes.
+// Documentos normativos y normas activas por proyecto (apoyo al RAG).
 
 import { useEffect, useState } from "react";
 import {
@@ -13,6 +11,17 @@ import {
   configurarNormasActivas,
 } from "../../lib/api";
 import { useProyecto } from "../../components/ProyectoContext";
+import {
+  Card,
+  CardBody,
+  PageHeader,
+  Badge,
+  EmptyState,
+  Alert,
+  btnPrimary,
+  btnDark,
+  labelCls,
+} from "../../components/ui";
 
 export default function Page() {
   const { proyectoId } = useProyecto();
@@ -26,7 +35,6 @@ export default function Page() {
   useEffect(() => {
     listarDocumentos().then(setDocumentos).catch((e) => setError(e.message));
   }, []);
-
   useEffect(() => {
     if (!proyectoId) return;
     listarNormasActivas(proyectoId)
@@ -46,13 +54,11 @@ export default function Page() {
       setError(e.message);
     }
   }
-
   function toggle(id: string) {
     const s = new Set(activas);
     s.has(id) ? s.delete(id) : s.add(id);
     setActivas(s);
   }
-
   async function onGuardar() {
     if (!proyectoId) return;
     setError(null);
@@ -66,70 +72,71 @@ export default function Page() {
   }
 
   return (
-    <main className="mx-auto max-w-4xl p-6">
-      <header className="mb-6">
-        <h1 className="text-2xl font-bold">Documentos normativos y normas activas</h1>
-        <p className="text-sm text-gray-600">
-          Registra los documentos y elige cuáles contrasta este proyecto. El texto
-          de cada norma se ingiere al RAG por separado (ver backend/datos).
-        </p>
-      </header>
+    <>
+      <PageHeader
+        title="Normas y corpus"
+        subtitle="Registra los documentos normativos y elige cuáles contrasta este proyecto. El texto se ingiere al RAG por separado."
+      />
 
-      {error && (
-        <div className="mb-4 rounded border border-red-300 bg-red-50 p-3 text-sm text-red-700">{error}</div>
-      )}
-      {msg && (
-        <div className="mb-4 rounded border border-green-300 bg-green-50 p-3 text-sm text-green-700">{msg}</div>
-      )}
+      {error && <Alert>{error}</Alert>}
+      {msg && <Alert tone="green">{msg}</Alert>}
 
-      <section className="mb-6 rounded-lg border bg-white p-4">
-        <h2 className="mb-3 font-semibold">Nuevo documento normativo</h2>
-        <div className="flex flex-wrap gap-2">
-          <input
-            className="flex-1 rounded border px-3 py-2"
-            placeholder="Nombre (EU AI Act, GDPR, Ley 19.628…)"
-            value={nombre}
-            onChange={(e) => setNombre(e.target.value)}
-          />
-          <input
-            className="rounded border px-3 py-2"
-            placeholder="Jurisdicción (UE, Chile…)"
-            value={jurisdiccion}
-            onChange={(e) => setJurisdiccion(e.target.value)}
-          />
-          <button onClick={onCrear} className="rounded bg-gray-800 px-4 py-2 text-white hover:bg-gray-700">
-            Agregar
-          </button>
-        </div>
-      </section>
+      <Card className="mb-6">
+        <CardBody>
+          <h2 className="mb-4 text-sm font-semibold text-slate-700">Nuevo documento normativo</h2>
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="flex-1 min-w-[240px]">
+              <label className={labelCls}>Nombre</label>
+              <input
+                className="field mt-1"
+                placeholder="EU AI Act, GDPR, Ley 19.628…"
+                value={nombre}
+                onChange={(e) => setNombre(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className={labelCls}>Jurisdicción</label>
+              <input
+                className="field mt-1 w-40"
+                placeholder="UE, Chile…"
+                value={jurisdiccion}
+                onChange={(e) => setJurisdiccion(e.target.value)}
+              />
+            </div>
+            <button onClick={onCrear} className={btnPrimary}>Agregar</button>
+          </div>
+        </CardBody>
+      </Card>
 
-      <section className="rounded-lg border bg-white p-4">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="font-semibold">Normas activas del proyecto</h2>
-          <button onClick={onGuardar} className="rounded bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-500">
-            Guardar selección
-          </button>
-        </div>
-        {documentos.length === 0 ? (
-          <p className="text-sm text-gray-500">No hay documentos registrados.</p>
-        ) : (
-          <ul className="space-y-2">
-            {documentos.map((d) => (
-              <li key={d.id} className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={activas.has(d.id)}
-                  onChange={() => toggle(d.id)}
-                  id={`doc-${d.id}`}
-                />
-                <label htmlFor={`doc-${d.id}`} className="text-sm">
-                  {d.nombre} {d.jurisdiccion && <span className="text-gray-400">· {d.jurisdiccion}</span>}
-                </label>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-    </main>
+      <Card>
+        <CardBody>
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-slate-700">Normas activas del proyecto</h2>
+            <button onClick={onGuardar} className={btnDark}>Guardar selección</button>
+          </div>
+          {documentos.length === 0 ? (
+            <p className="text-sm text-slate-500">No hay documentos registrados.</p>
+          ) : (
+            <ul className="divide-y divide-slate-100">
+              {documentos.map((d) => (
+                <li key={d.id} className="flex items-center gap-3 py-2.5">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 rounded border-slate-300 text-accent-600 focus:ring-accent-500"
+                    checked={activas.has(d.id)}
+                    onChange={() => toggle(d.id)}
+                    id={`doc-${d.id}`}
+                  />
+                  <label htmlFor={`doc-${d.id}`} className="flex flex-1 items-center gap-2 text-sm text-slate-700">
+                    <span className="font-medium">{d.nombre}</span>
+                    {d.jurisdiccion && <Badge tone="slate">{d.jurisdiccion}</Badge>}
+                  </label>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardBody>
+      </Card>
+    </>
   );
 }
