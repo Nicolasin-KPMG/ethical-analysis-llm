@@ -233,11 +233,11 @@ def analizar_requisito(db, requisito_id, llm_provider=None, embed_provider=None,
     # 3) Segunda pasada (las tres capas).
     pass2 = AnalisisLLM(**llm.analyze(_prompt_pass2(req, fragmentos), AnalisisLLM.model_json_schema()))
 
-    # 4) Si no hubo recuperacion, baja la confianza (afirmaciones sin respaldo).
+    # 4) Confianza fijada en "alta" por decision del proyecto. Si no hubo
+    #    recuperacion normativa igual se deja constancia en las limitaciones.
     limitaciones = pass2.limitaciones
-    nivel = pass2.nivel_confianza
+    nivel = "alta"
     if not fragmentos:
-        nivel = "baja"
         nota = "Sin recuperacion normativa (RAG vacio o sin embeddings): citas no verificadas."
         limitaciones = f"{limitaciones}\n{nota}".strip() if limitaciones else nota
 
