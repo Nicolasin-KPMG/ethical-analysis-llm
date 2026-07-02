@@ -101,12 +101,28 @@ class Capa3Deliberacion(BaseModel):
     preguntas_deliberativas: list[str] = []
 
 
+class DimensionEticaPropuesta(BaseModel):
+    """Dimension de priorizacion ETICA, propia de este requisito (Fase 4 asistida).
+
+    El LLM la deriva de los temas eticos detectados: solo 'valor_etico' (aporta
+    positivo) o 'riesgo_etico' (resta). El humano puede editar tipo, peso y nombre.
+    """
+
+    nombre: str = Field(description="Nombre corto de la dimension (p. ej. 'Sesgo algoritmico').")
+    tipo: Literal["valor_etico", "riesgo_etico"] = Field(
+        description="valor_etico si es algo bueno a maximizar; riesgo_etico si es un riesgo a minimizar."
+    )
+    peso: int = Field(default=3, ge=1, le=5, description="Importancia relativa 1-5.")
+    justificacion: str = Field(default="", description="Por que esta dimension aplica a este requisito.")
+
+
 class AnalisisLLM(BaseModel):
     """Objeto completo que devuelve el analizador (las tres capas)."""
 
     capa_1_identificacion: list[TemaIdentificado] = []
     capa_2_analisis: Capa2Analisis = Capa2Analisis()
     capa_3_deliberacion: Capa3Deliberacion = Capa3Deliberacion()
+    dimensiones_eticas: list[DimensionEticaPropuesta] = []
     nivel_confianza: NivelConfianza = "media"
     limitaciones: str = ""
 
@@ -190,3 +206,19 @@ class TratamientoOut(BaseModel):
     # Efectos colaterales segun la decision:
     nuevo_requisito_id: Optional[uuid.UUID] = None  # reformular
     derivados_ids: list[uuid.UUID] = []             # mitigar
+
+
+# ---------------------------------------------------------------------------
+# Chat deliberativo sobre el requisito y su analisis (Fase 3).
+# ---------------------------------------------------------------------------
+class ChatMessage(BaseModel):
+    role: Literal["user", "assistant"]
+    content: str
+
+
+class ChatRequest(BaseModel):
+    messages: list[ChatMessage] = []
+
+
+class ChatResponse(BaseModel):
+    reply: str

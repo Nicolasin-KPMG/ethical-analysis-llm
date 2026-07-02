@@ -24,6 +24,11 @@ class LLMProvider(ABC):
         """Recibe un prompt y un JSON Schema de salida; devuelve un dict validado."""
         ...
 
+    @abstractmethod
+    def chat(self, system: str, messages: list[dict]) -> str:
+        """Conversacion libre (texto). `messages` = [{"role","content"}, ...]."""
+        ...
+
 
 class AnthropicLLM(LLMProvider):
     """LLM por defecto: Claude via SDK de Anthropic, con salida estructurada."""
@@ -63,6 +68,16 @@ class AnthropicLLM(LLMProvider):
                 return bloque.input
         raise RuntimeError("El modelo no devolvio una llamada a la herramienta.")
 
+    def chat(self, system: str, messages: list[dict]) -> str:
+        client = self._get_client()
+        msg = client.messages.create(
+            model=self.model,
+            max_tokens=1024,
+            system=system,
+            messages=messages,
+        )
+        return "".join(b.text for b in msg.content if b.type == "text")
+
 
 class OpenAILLM(LLMProvider):
     """LLM via API de OpenAI (GPT). Pieza independiente de los embeddings:
@@ -99,6 +114,14 @@ class OpenAILLM(LLMProvider):
         )
         return json.loads(resp.choices[0].message.content)
 
+    def chat(self, system: str, messages: list[dict]) -> str:
+        client = self._get_client()
+        resp = client.chat.completions.create(
+            model=self.model,
+            messages=[{"role": "system", "content": system}, *messages],
+        )
+        return resp.choices[0].message.content or ""
+
 
 class LocalLLM(LLMProvider):
     """LLM local via endpoint compatible con OpenAI (Ollama / vLLM)."""
@@ -129,6 +152,14 @@ class LocalLLM(LLMProvider):
             response_format={"type": "json_object"},
         )
         return json.loads(resp.choices[0].message.content)
+
+    def chat(self, system: str, messages: list[dict]) -> str:
+        client = self._get_client()
+        resp = client.chat.completions.create(
+            model=self.model,
+            messages=[{"role": "system", "content": system}, *messages],
+        )
+        return resp.choices[0].message.content or ""
 
 
 def get_llm_provider() -> LLMProvider:

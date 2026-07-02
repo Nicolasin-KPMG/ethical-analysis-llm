@@ -32,7 +32,7 @@ const TIPOS: { value: TipoDimension; label: string; suma: boolean }[] = [
   { value: "beneficio", label: "Beneficio", suma: true },
   { value: "valor_etico", label: "Valor ético", suma: true },
   { value: "costo", label: "Costo", suma: false },
-  { value: "riesgo_etico_residual", label: "Riesgo ético residual", suma: false },
+  { value: "riesgo_etico", label: "Riesgo ético", suma: false },
 ];
 const suma = (t: string) => TIPOS.find((x) => x.value === t)?.suma ?? true;
 
@@ -101,7 +101,7 @@ export default function Page() {
       <PageHeader
         eyebrow="Fase 4"
         title="Dimensiones de priorización"
-        subtitle="Define los criterios. Beneficio y valor ético suman; costo y riesgo ético residual restan en el ranking."
+        subtitle="Define los criterios generales. Beneficio y valor ético suman; costo y riesgo ético restan en el ranking. Las dimensiones éticas por requisito las detecta la IA en el análisis (Fases 2-3)."
       />
 
       {error && <Alert>{error}</Alert>}

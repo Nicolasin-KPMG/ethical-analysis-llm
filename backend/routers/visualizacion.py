@@ -71,7 +71,7 @@ def exportar_csv(proyecto_id: uuid.UUID, db: Session = Depends(get_db)):
             "beneficio",
             "valor_etico",
             "costo",
-            "riesgo_etico_residual",
+            "riesgo_etico",
             "puntaje_final",
             "bandera_etica",
         ]
@@ -86,7 +86,7 @@ def exportar_csv(proyecto_id: uuid.UUID, db: Session = Depends(get_db)):
                 d["beneficio"],
                 d["valor_etico"],
                 d["costo"],
-                d["riesgo_etico_residual"],
+                d["riesgo_etico"],
                 it["puntaje_final"],
                 it["bandera"],
             ]

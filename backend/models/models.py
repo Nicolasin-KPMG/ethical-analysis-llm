@@ -218,7 +218,7 @@ class Dimension(Base):
         ForeignKey("proyecto.id", ondelete="CASCADE"),
     )
     nombre = Column(Text, nullable=False)
-    # beneficio | valor_etico | costo | riesgo_etico_residual
+    # beneficio | valor_etico | costo | riesgo_etico
     tipo = Column(Text, nullable=False)
     descripcion = Column(Text)
     peso = Column(Integer)
@@ -226,6 +226,31 @@ class Dimension(Base):
 
     __table_args__ = (
         CheckConstraint("peso BETWEEN 1 AND 5", name="ck_dimension_peso"),
+    )
+
+
+class DimensionAplicabilidad(Base):
+    """Restringe una dimension a los requisitos a los que aplica.
+
+    Se usa para las dimensiones ETICAS que la IA detecta durante el analisis
+    (Fases 2-3): un tema etico es propio de algunos requisitos, no de todos. Si
+    una dimension tiene al menos una fila aqui, es "restringida" y en la matriz
+    de evaluacion solo es editable para los requisitos listados; para el resto la
+    celda queda fija en 0 (no aplica). Las dimensiones generales (beneficio,
+    costo) no tienen filas aqui y aplican a todos los requisitos.
+    """
+
+    __tablename__ = "dimension_aplicabilidad"
+
+    dimension_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("dimension.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    requisito_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("requisito.id", ondelete="CASCADE"),
+        primary_key=True,
     )
 
 

@@ -12,7 +12,7 @@ class DesgloseRanking(BaseModel):
     beneficio: int
     valor_etico: int
     costo: int
-    riesgo_etico_residual: int
+    riesgo_etico: int
 
 
 class RankingItem(BaseModel):

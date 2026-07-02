@@ -72,7 +72,7 @@ export default function Page() {
       <PageHeader
         eyebrow="Fase 5"
         title="Evaluación"
-        subtitle="Asigna a cada requisito una fuerza de 0 a 5 (0 = no aplica) frente a cada dimensión. Se guarda al salir de la celda."
+        subtitle="Asigna a cada requisito una fuerza de 0 a 5 (0 = no aplica) frente a cada dimensión. Las dimensiones éticas solo aplican a su requisito; en los demás la celda queda fija en 0. Se guarda al salir de la celda."
       />
 
       {error && <Alert>{error}</Alert>}
@@ -105,6 +105,22 @@ export default function Page() {
                     </td>
                     {dimensiones.map((d) => {
                       const key = celda(r.id, d.id);
+                      // La dimensión no aplica a este requisito: celda fija en 0.
+                      const noAplica = d.restringida && !(d.requisitos_aplica ?? []).includes(r.id);
+                      if (noAplica) {
+                        return (
+                          <td key={d.id} className="px-3 py-2 text-center">
+                            <input
+                              type="number"
+                              disabled
+                              title="Esta dimensión no aplica a este requisito"
+                              className="field-sm w-16 cursor-not-allowed bg-slate-100 text-center text-slate-400"
+                              value={0}
+                              readOnly
+                            />
+                          </td>
+                        );
+                      }
                       return (
                         <td key={d.id} className="px-3 py-2 text-center">
                           <input

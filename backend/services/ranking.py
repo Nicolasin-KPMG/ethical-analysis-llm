@@ -9,16 +9,19 @@ Formula del contexto, por requisito vigente:
     PuntajeFinal =   Σ (peso × fuerza) de dimensiones tipo beneficio
                    + Σ (peso × fuerza) de dimensiones tipo valor_etico
                    − Σ (peso × fuerza) de dimensiones tipo costo
-                   − Σ (peso × fuerza) de dimensiones tipo riesgo_etico_residual
+                   − Σ (peso × fuerza) de dimensiones tipo riesgo_etico
 
-Beneficio y valor_etico SUMAN; costo y riesgo_etico_residual RESTAN.
+Beneficio y valor_etico SUMAN; costo y riesgo_etico RESTAN.
 La fuerza 0 significa "no aplica", asi que no aporta (peso × 0 = 0).
 Se ordena de mayor a menor puntaje.
 """
 
 # Tipos de dimension que suman y que restan (seccion 4, Fase 4).
 TIPOS_SUMAN = ("beneficio", "valor_etico")
-TIPOS_RESTAN = ("costo", "riesgo_etico_residual")
+TIPOS_RESTAN = ("costo", "riesgo_etico")
+
+# Compatibilidad con el nombre anterior del tipo (dimensiones ya creadas).
+_ALIAS_TIPO = {"riesgo_etico_residual": "riesgo_etico"}
 
 
 def calcular_ranking(requisitos, dimensiones, evaluaciones):
@@ -33,13 +36,13 @@ def calcular_ranking(requisitos, dimensiones, evaluaciones):
       {
         "requisito_id", "codigo", "nombre",
         "puntaje_final",
-        "desglose": {"beneficio", "valor_etico", "costo", "riesgo_etico_residual"}
+        "desglose": {"beneficio", "valor_etico", "costo", "riesgo_etico"}
       }
     """
     # Mapa dimension_id -> (tipo, peso). El peso puede ser None si no se cargo;
     # en ese caso lo tratamos como 0 para no romper el calculo.
     dim_info = {
-        d.id: (d.tipo, d.peso or 0)
+        d.id: (_ALIAS_TIPO.get(d.tipo, d.tipo), d.peso or 0)
         for d in dimensiones
     }
 
@@ -56,7 +59,7 @@ def calcular_ranking(requisitos, dimensiones, evaluaciones):
             "beneficio": 0,
             "valor_etico": 0,
             "costo": 0,
-            "riesgo_etico_residual": 0,
+            "riesgo_etico": 0,
         }
 
         for dim_id, (tipo, peso) in dim_info.items():
@@ -69,7 +72,7 @@ def calcular_ranking(requisitos, dimensiones, evaluaciones):
             desglose["beneficio"]
             + desglose["valor_etico"]
             - desglose["costo"]
-            - desglose["riesgo_etico_residual"]
+            - desglose["riesgo_etico"]
         )
 
         items.append(

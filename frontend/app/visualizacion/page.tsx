@@ -83,7 +83,7 @@ export default function Page() {
                 <td className={`${td} text-right tabular-nums text-emerald-600`}>{it.desglose.beneficio}</td>
                 <td className={`${td} text-right tabular-nums text-emerald-600`}>{it.desglose.valor_etico}</td>
                 <td className={`${td} text-right tabular-nums text-red-500`}>−{it.desglose.costo}</td>
-                <td className={`${td} text-right tabular-nums text-red-500`}>−{it.desglose.riesgo_etico_residual}</td>
+                <td className={`${td} text-right tabular-nums text-red-500`}>−{it.desglose.riesgo_etico}</td>
                 <td className={`${td} text-right text-lg font-bold tabular-nums text-slate-900`}>{it.puntaje_final}</td>
               </tr>
             );

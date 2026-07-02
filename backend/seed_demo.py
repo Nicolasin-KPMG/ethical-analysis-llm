@@ -59,7 +59,7 @@ DIMENSIONES = [
     {"nombre": "Equidad y no discriminación", "tipo": "valor_etico", "peso": 5},
     {"nombre": "Transparencia y explicabilidad", "tipo": "valor_etico", "peso": 4},
     {"nombre": "Costo de desarrollo", "tipo": "costo", "peso": 3},
-    {"nombre": "Riesgo de privacidad", "tipo": "riesgo_etico_residual", "peso": 4},
+    {"nombre": "Riesgo de privacidad", "tipo": "riesgo_etico", "peso": 4},
 ]
 
 # 10 requisitos realistas para el dominio.
@@ -84,7 +84,7 @@ REQUISITOS = [
 #   col 2: Equidad/no discrimin.   (valor_etico)
 #   col 3: Transparencia/explic.   (valor_etico)
 #   col 4: Costo de desarrollo     (costo)
-#   col 5: Riesgo de privacidad    (riesgo_etico_residual)
+#   col 5: Riesgo de privacidad    (riesgo_etico)
 # Cada fila es un perfil plausible; hay algunos 0 ("no aplica") a proposito.
 MATRIZ = [
     [5, 4, 2, 2, 4, 5],  # REQ-001 Filtrado de CVs: útil pero éticamente riesgoso
@@ -157,7 +157,7 @@ def main():
         dg = it["desglose"]
         print(
             f"{k:>2}  {it['codigo']:8} {it['puntaje_final']:>7}  "
-            f"{dg['beneficio']:>5} {dg['valor_etico']:>5} {dg['costo']:>5} {dg['riesgo_etico_residual']:>5}  "
+            f"{dg['beneficio']:>5} {dg['valor_etico']:>5} {dg['costo']:>5} {dg['riesgo_etico']:>5}  "
             f"{it['nombre']}"
         )
 
@@ -165,11 +165,11 @@ def main():
     peso_de = {d["id"]: (d["tipo"], d["peso"]) for d in dims}
     ok = True
     for i, r in enumerate(reqs):
-        acc = {"beneficio": 0, "valor_etico": 0, "costo": 0, "riesgo_etico_residual": 0}
+        acc = {"beneficio": 0, "valor_etico": 0, "costo": 0, "riesgo_etico": 0}
         for j, d in enumerate(dims):
             tipo, peso = peso_de[d["id"]]
             acc[tipo] += peso * fuerza_para(i, j)
-        esperado = acc["beneficio"] + acc["valor_etico"] - acc["costo"] - acc["riesgo_etico_residual"]
+        esperado = acc["beneficio"] + acc["valor_etico"] - acc["costo"] - acc["riesgo_etico"]
         real = next(x for x in ranking if x["requisito_id"] == r["id"])["puntaje_final"]
         if esperado != real:
             ok = False

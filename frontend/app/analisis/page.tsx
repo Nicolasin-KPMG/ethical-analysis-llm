@@ -9,11 +9,18 @@ import {
   Analisis,
   Tema,
   Decision,
+  Dimension,
+  TipoDimension,
+  ChatMessage,
   listarRequisitos,
   analizarRequisito,
   obtenerAnalisis,
   editarAnalisis,
   crearTratamiento,
+  listarDimensiones,
+  editarDimension,
+  eliminarDimension,
+  chatRequisito,
 } from "../../lib/api";
 import { useProyecto } from "../../components/ProyectoContext";
 import {
@@ -62,6 +69,14 @@ export default function Page() {
   const [nuevaDescripcion, setNuevaDescripcion] = useState("");
   const [derivados, setDerivados] = useState<{ nombre: string; descripcion: string }[]>([]);
 
+  // Dimensiones éticas detectadas por la IA para este requisito (editables).
+  const [dimsEticas, setDimsEticas] = useState<Dimension[]>([]);
+
+  // Chat deliberativo con el asistente sobre el requisito.
+  const [chat, setChat] = useState<ChatMessage[]>([]);
+  const [chatInput, setChatInput] = useState("");
+  const [chatCargando, setChatCargando] = useState(false);
+
   const seleccionado = requisitos.find((r) => r.id === selId) || null;
 
   useEffect(() => {
@@ -75,8 +90,63 @@ export default function Page() {
     if (!selId) return;
     setMsg(null);
     setError(null);
+    setChat([]);
+    setChatInput("");
     obtenerAnalisis(selId).then(cargarAnalisis).catch((e) => setError(e.message));
+    cargarDimsEticas();
   }, [selId]);
+
+  // Dimensiones éticas = las restringidas y aplicables a este requisito.
+  function cargarDimsEticas() {
+    if (!proyectoId || !selId) return setDimsEticas([]);
+    listarDimensiones(proyectoId)
+      .then((ds) =>
+        setDimsEticas(
+          ds.filter(
+            (d) =>
+              (d.tipo === "valor_etico" || d.tipo === "riesgo_etico") &&
+              (d.requisitos_aplica ?? []).includes(selId),
+          ),
+        ),
+      )
+      .catch((e) => setError(e.message));
+  }
+
+  async function onEditarDimEtica(id: string, cambios: Partial<Dimension>) {
+    setDimsEticas(dimsEticas.map((d) => (d.id === id ? { ...d, ...cambios } : d)));
+    try {
+      await editarDimension(id, cambios as any);
+    } catch (e: any) {
+      setError(e.message);
+    }
+  }
+  async function onQuitarDimEtica(id: string) {
+    if (!confirm("¿Quitar esta dimensión ética? Se borrará del proyecto y sus evaluaciones.")) return;
+    try {
+      await eliminarDimension(id);
+      setDimsEticas(dimsEticas.filter((d) => d.id !== id));
+    } catch (e: any) {
+      setError(e.message);
+    }
+  }
+
+  async function onEnviarChat() {
+    const texto = chatInput.trim();
+    if (!texto || !selId) return;
+    const nuevos: ChatMessage[] = [...chat, { role: "user", content: texto }];
+    setChat(nuevos);
+    setChatInput("");
+    setChatCargando(true);
+    try {
+      const { reply } = await chatRequisito(selId, nuevos);
+      setChat([...nuevos, { role: "assistant", content: reply }]);
+    } catch (e: any) {
+      setError(e.message);
+      setChat(nuevos); // conserva lo enviado; el usuario puede reintentar
+    } finally {
+      setChatCargando(false);
+    }
+  }
 
   function cargarAnalisis(a: Analisis | null) {
     setAnalisis(a);
@@ -98,6 +168,7 @@ export default function Page() {
     setMsg(null);
     try {
       cargarAnalisis(await analizarRequisito(selId));
+      cargarDimsEticas();
       setMsg("Análisis generado por el LLM. Revísalo y edítalo libremente.");
     } catch (e: any) {
       setError(e.message);
@@ -249,13 +320,23 @@ export default function Page() {
                         <div className="space-y-3">
                           {temas.map((t, i) => (
                             <div key={i} className="rounded-lg border border-slate-200 p-3">
-                              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                                <input className="field-sm font-medium" placeholder="Tema ético" value={t.tema_etico} onChange={(e) => setTema(i, "tema_etico", e.target.value)} />
-                                <input className="field-sm" placeholder="Actor afectado" value={t.actor_afectado ?? ""} onChange={(e) => setTema(i, "actor_afectado", e.target.value)} />
-                                <input className="field-sm" placeholder="Tipo de daño" value={t.tipo_dano ?? ""} onChange={(e) => setTema(i, "tipo_dano", e.target.value)} />
-                                <textarea className="field-sm sm:col-span-2" rows={2} placeholder="Norma tensionada (norma + artículo concreto)" value={t.norma_tensionada_texto ?? ""} onChange={(e) => setTema(i, "norma_tensionada_texto", e.target.value)} />
+                              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                <Campo label="Tema ético">
+                                  <input className="field-sm font-medium" placeholder="p. ej. Falta de transparencia" value={t.tema_etico} onChange={(e) => setTema(i, "tema_etico", e.target.value)} />
+                                </Campo>
+                                <Campo label="Actor afectado">
+                                  <input className="field-sm" placeholder="p. ej. Personas postulantes" value={t.actor_afectado ?? ""} onChange={(e) => setTema(i, "actor_afectado", e.target.value)} />
+                                </Campo>
+                                <Campo label="Tipo de daño" className="sm:col-span-2">
+                                  <input className="field-sm" placeholder="p. ej. Imposibilidad de conocer razones de exclusión" value={t.tipo_dano ?? ""} onChange={(e) => setTema(i, "tipo_dano", e.target.value)} />
+                                </Campo>
+                                <Campo label="Norma tensionada (norma + artículo concreto)" className="sm:col-span-2">
+                                  <textarea className="field-sm" rows={2} placeholder="p. ej. EU AI Act, Anexo III(4)" value={t.norma_tensionada_texto ?? ""} onChange={(e) => setTema(i, "norma_tensionada_texto", e.target.value)} />
+                                </Campo>
+                                <Campo label="Evidencia" className="sm:col-span-2">
+                                  <textarea className="field-sm" rows={2} placeholder="Por qué se detecta este tema" value={t.evidencia ?? ""} onChange={(e) => setTema(i, "evidencia", e.target.value)} />
+                                </Campo>
                               </div>
-                              <textarea className="field-sm mt-2 w-full" rows={2} placeholder="Evidencia" value={t.evidencia ?? ""} onChange={(e) => setTema(i, "evidencia", e.target.value)} />
                               {t.citas.length > 0 && (
                                 <div className="mt-2 rounded-md bg-slate-50 p-2 text-xs text-slate-500">
                                   <span className="font-semibold text-slate-600">Citas normativas</span>
@@ -268,6 +349,62 @@ export default function Page() {
                               )}
                               <button onClick={() => setTemas(temas.filter((_, k) => k !== i))} className="mt-2 text-xs font-medium text-red-500 hover:text-red-600">
                                 Quitar tema
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </CardBody>
+                  </Card>
+
+                  {/* Dimensiones éticas detectadas (Fase 4 asistida) */}
+                  <Card>
+                    <CardBody>
+                      <h3 className="font-semibold text-slate-900">Dimensiones éticas detectadas</h3>
+                      <p className="mt-0.5 text-xs text-slate-500">
+                        La IA las deriva de los temas de este requisito. Edítalas: define si es
+                        valor ético (+) o riesgo ético (−) y su peso. Solo aplican a este requisito;
+                        en la evaluación, los demás requisitos quedan en 0 para estas columnas.
+                      </p>
+                      {dimsEticas.length === 0 ? (
+                        <p className="mt-3 text-sm text-slate-500">
+                          Sin dimensiones éticas para este requisito. Se generan al analizar con IA.
+                        </p>
+                      ) : (
+                        <div className="mt-3 space-y-2">
+                          {dimsEticas.map((d) => (
+                            <div key={d.id} className="grid grid-cols-1 gap-2 rounded-lg border border-slate-200 p-3 sm:grid-cols-[1fr_150px_90px_auto] sm:items-end">
+                              <Campo label="Nombre">
+                                <input
+                                  className="field-sm"
+                                  value={d.nombre}
+                                  onChange={(e) => setDimsEticas(dimsEticas.map((x) => (x.id === d.id ? { ...x, nombre: e.target.value } : x)))}
+                                  onBlur={(e) => onEditarDimEtica(d.id, { nombre: e.target.value })}
+                                />
+                              </Campo>
+                              <Campo label="Tipo">
+                                <select
+                                  className="field-sm"
+                                  value={d.tipo}
+                                  onChange={(e) => onEditarDimEtica(d.id, { tipo: e.target.value as TipoDimension })}
+                                >
+                                  <option value="valor_etico">Valor ético (+)</option>
+                                  <option value="riesgo_etico">Riesgo ético (−)</option>
+                                </select>
+                              </Campo>
+                              <Campo label="Peso">
+                                <input
+                                  type="number"
+                                  min={1}
+                                  max={5}
+                                  className="field-sm text-center"
+                                  value={d.peso ?? 3}
+                                  onChange={(e) => setDimsEticas(dimsEticas.map((x) => (x.id === d.id ? { ...x, peso: Number(e.target.value) } : x)))}
+                                  onBlur={(e) => onEditarDimEtica(d.id, { peso: Number(e.target.value) })}
+                                />
+                              </Campo>
+                              <button onClick={() => onQuitarDimEtica(d.id)} className="pb-2 text-xs font-medium text-red-500 hover:text-red-600">
+                                Quitar
                               </button>
                             </div>
                           ))}
@@ -310,6 +447,65 @@ export default function Page() {
                         </Bloque>
                       </div>
                     </details>
+                  </Card>
+
+                  {/* Chat deliberativo con el asistente */}
+                  <Card>
+                    <CardBody>
+                      <h3 className="font-semibold text-slate-900">Conversar con el equipo</h3>
+                      <p className="mt-0.5 text-xs text-slate-500">
+                        Discute este requisito y su análisis con el asistente de ética. Acompaña la
+                        deliberación; no decide por el equipo.
+                      </p>
+
+                      <div className="mt-3 max-h-80 space-y-3 overflow-y-auto rounded-lg border border-slate-200 bg-slate-50/60 p-3">
+                        {chat.length === 0 ? (
+                          <p className="py-6 text-center text-sm text-slate-400">
+                            Escribe una pregunta para empezar la conversación.
+                          </p>
+                        ) : (
+                          chat.map((m, i) => (
+                            <div key={i} className={m.role === "user" ? "flex justify-end" : "flex justify-start"}>
+                              <div
+                                className={
+                                  "max-w-[80%] whitespace-pre-wrap rounded-2xl px-3 py-2 text-sm " +
+                                  (m.role === "user"
+                                    ? "bg-accent-600 text-white"
+                                    : "border border-slate-200 bg-white text-slate-700")
+                                }
+                              >
+                                {m.content}
+                              </div>
+                            </div>
+                          ))
+                        )}
+                        {chatCargando && (
+                          <div className="flex justify-start">
+                            <div className="rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-400">
+                              escribiendo…
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="mt-3 flex gap-2">
+                        <input
+                          className="field flex-1"
+                          placeholder="Escribe tu mensaje…"
+                          value={chatInput}
+                          onChange={(e) => setChatInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" && !e.shiftKey) {
+                              e.preventDefault();
+                              onEnviarChat();
+                            }
+                          }}
+                        />
+                        <button onClick={onEnviarChat} disabled={chatCargando || !chatInput.trim()} className={btnPrimary}>
+                          Enviar
+                        </button>
+                      </div>
+                    </CardBody>
                   </Card>
 
                   {/* Limitaciones + guardar */}
@@ -364,6 +560,23 @@ export default function Page() {
         </div>
       </div>
     </>
+  );
+}
+
+function Campo({
+  label,
+  className = "",
+  children,
+}: {
+  label: string;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className={className}>
+      <label className="mb-1 block text-xs font-medium text-slate-500">{label}</label>
+      {children}
+    </div>
   );
 }
 

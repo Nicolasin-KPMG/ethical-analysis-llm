@@ -39,7 +39,7 @@ export type TipoDimension =
   | "beneficio"
   | "valor_etico"
   | "costo"
-  | "riesgo_etico_residual";
+  | "riesgo_etico";
 
 export type Dimension = {
   id: string;
@@ -49,6 +49,10 @@ export type Dimension = {
   descripcion?: string | null;
   peso?: number | null;
   justificacion_peso?: string | null;
+  // Aplicabilidad: si restringida, la dimensión solo aplica a requisitos_aplica;
+  // para el resto la celda de evaluación queda fija en 0 (no aplica).
+  restringida?: boolean;
+  requisitos_aplica?: string[];
 };
 
 export type DimensionInput = {
@@ -77,7 +81,7 @@ export type RankingItem = {
     beneficio: number;
     valor_etico: number;
     costo: number;
-    riesgo_etico_residual: number;
+    riesgo_etico: number;
   };
 };
 
@@ -283,6 +287,16 @@ export type Decision = "aceptar" | "reformular" | "mitigar" | "eliminar";
 
 export const analizarRequisito = (requisitoId: string) =>
   request<Analisis>(`/requisitos/${requisitoId}/analizar`, { method: "POST" });
+
+// --- Chat deliberativo sobre un requisito y su análisis ---
+
+export type ChatMessage = { role: "user" | "assistant"; content: string };
+
+export const chatRequisito = (requisitoId: string, messages: ChatMessage[]) =>
+  request<{ reply: string }>(`/requisitos/${requisitoId}/chat`, {
+    method: "POST",
+    body: JSON.stringify({ messages }),
+  });
 
 // GET del análisis: devuelve null si el requisito aún no tiene análisis (404).
 export const obtenerAnalisis = async (

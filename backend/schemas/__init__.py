@@ -20,6 +20,9 @@ from schemas.analisis import (
     CitaOut,
     TratamientoCreate,
     TratamientoOut,
+    ChatMessage,
+    ChatRequest,
+    ChatResponse,
 )
 from schemas.relacion import (
     RelacionCreate,
@@ -58,6 +61,9 @@ __all__ = [
     "CitaOut",
     "TratamientoCreate",
     "TratamientoOut",
+    "ChatMessage",
+    "ChatRequest",
+    "ChatResponse",
     "RelacionCreate",
     "RelacionUpdate",
     "RelacionOut",

@@ -13,12 +13,16 @@ flujo con dobles deterministas, sin gastar API.
 
 import uuid
 
+from sqlalchemy import func as sa_func
+
 from models import (
     Requisito,
     AnalisisEtico,
     TemaEticoDetectado,
     CitaNormativa,
     ChunkNormativo,
+    Dimension,
+    DimensionAplicabilidad,
 )
 from schemas.analisis import AnalisisLLM, PrimeraPasada
 from providers.llm import get_llm_provider
@@ -111,6 +115,11 @@ def _prompt_pass2(req: Requisito, fragmentos: list[dict]) -> str:
         "- capa_3_deliberacion: opciones de tratamiento (aceptar/reformular/mitigar/"
         "eliminar), reformulaciones propuestas, requisitos derivados y preguntas "
         "deliberativas.\n"
+        "- dimensiones_eticas: dimensiones de priorizacion ETICAS propias de ESTE "
+        "requisito, derivadas de los temas detectados. Cada una con tipo "
+        "'valor_etico' (algo bueno a maximizar, suma) o 'riesgo_etico' (un riesgo a "
+        "minimizar, resta), un peso 1-5 y una justificacion. Solo las que apliquen "
+        "realmente a este requisito; si no hay tensiones eticas, deja la lista vacia.\n"
         f"{nota_citas}\n\n"
         f"REQUISITO:\n{_texto_requisito(req)}\n\n"
         f"FRAGMENTOS NORMATIVOS RECUPERADOS:\n{ctx}"
@@ -155,6 +164,47 @@ def _recuperar_fragmentos(db, req, consultas, embed_provider, k, max_total):
     # Ordena por score (vinculantes priorizados) y corta al tope.
     ordenados = sorted(mejores.values(), key=lambda x: x[0])[:max_total]
     return [frag for _score, frag in ordenados]
+
+
+def _sincronizar_dimensiones_eticas(db, req, propuestas):
+    """Convierte las dimensiones eticas propuestas por el LLM en filas Dimension
+    del proyecto y las marca como aplicables a ESTE requisito.
+
+    - Upsert por (proyecto_id, nombre) sin distinguir mayusculas: si ya existe una
+      dimension con ese nombre (p. ej. detectada en otro requisito o editada por el
+      humano), NO se pisan su tipo/peso; solo se agrega la aplicabilidad. Asi el
+      humano puede reclasificarla y sigue valiendo su edicion.
+    - Si no existe, se crea con el tipo y peso propuestos.
+    - La aplicabilidad (dimension_id, requisito_id) es la que luego pone en 0 la
+      celda para los requisitos que no tienen esa dimension (Fase 5).
+    """
+    for p in propuestas:
+        nombre = (p.nombre or "").strip()
+        if not nombre:
+            continue
+        dim = (
+            db.query(Dimension)
+            .filter(
+                Dimension.proyecto_id == req.proyecto_id,
+                sa_func.lower(Dimension.nombre) == nombre.lower(),
+            )
+            .first()
+        )
+        if dim is None:
+            dim = Dimension(
+                proyecto_id=req.proyecto_id,
+                nombre=nombre,
+                tipo=p.tipo,
+                peso=p.peso,
+                descripcion="Dimension etica detectada por IA.",
+                justificacion_peso=p.justificacion,
+            )
+            db.add(dim)
+            db.flush()  # para tener dim.id
+        # Marca aplicabilidad a este requisito (idempotente).
+        ya = db.get(DimensionAplicabilidad, (dim.id, req.id))
+        if ya is None:
+            db.add(DimensionAplicabilidad(dimension_id=dim.id, requisito_id=req.id))
 
 
 def analizar_requisito(db, requisito_id, llm_provider=None, embed_provider=None, k=None, max_fragmentos=None):
@@ -232,6 +282,9 @@ def analizar_requisito(db, requisito_id, llm_provider=None, embed_provider=None,
                     texto_citado=cita.texto_citado,
                 )
             )
+
+    # Dimensiones eticas propias de este requisito (Fase 4 asistida).
+    _sincronizar_dimensiones_eticas(db, req, pass2.dimensiones_eticas)
 
     db.commit()
     db.refresh(analisis)

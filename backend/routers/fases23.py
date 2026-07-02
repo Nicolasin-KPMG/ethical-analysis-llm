@@ -28,9 +28,17 @@ from models import (
     Tratamiento,
     RelacionRequisito,
 )
-from schemas import AnalisisOut, AnalisisUpdate, TratamientoCreate, TratamientoOut
+from schemas import (
+    AnalisisOut,
+    AnalisisUpdate,
+    TratamientoCreate,
+    TratamientoOut,
+    ChatRequest,
+    ChatResponse,
+)
 from services.analysis import analizar_requisito
 from services.bandera import bandera_de
+from providers.llm import get_llm_provider
 
 router = APIRouter(tags=["fases-2-3"])
 
@@ -274,3 +282,88 @@ def crear_tratamiento(
         "nuevo_requisito_id": nuevo_requisito_id,
         "derivados_ids": derivados_ids,
     }
+
+
+# ---------------------------------------------------------------------------
+# Chat deliberativo: conversar con el asistente sobre el requisito y su analisis
+# ---------------------------------------------------------------------------
+def _contexto_chat(db: Session, req: Requisito, analisis: AnalisisEtico | None) -> str:
+    """Arma el contexto (texto) que el asistente conoce: el requisito y su analisis."""
+    partes = [
+        "REQUISITO EN DISCUSION:",
+        f"- Codigo: {req.codigo or '-'}",
+        f"- Nombre: {req.nombre}",
+        f"- Descripcion: {req.descripcion or '-'}",
+        f"- Estado: {req.estado}",
+    ]
+    if analisis is None:
+        partes.append("\n(El requisito aun no tiene analisis etico.)")
+        return "\n".join(partes)
+
+    temas = (
+        db.query(TemaEticoDetectado)
+        .filter(TemaEticoDetectado.analisis_id == analisis.id)
+        .all()
+    )
+    partes.append("\nCAPA 1 - Temas eticos detectados:")
+    if temas:
+        for t in temas:
+            partes.append(
+                f"- {t.tema_etico} | actor: {t.actor_afectado or '-'} | "
+                f"dano: {t.tipo_dano or '-'} | norma: {t.norma_tensionada_texto or '-'}"
+            )
+    else:
+        partes.append("- (sin temas detectados)")
+
+    capas = analisis.capas_2_3 or {}
+    c2 = capas.get("capa_2_analisis", {})
+    c3 = capas.get("capa_3_deliberacion", {})
+    if c2.get("mapa_stakeholders"):
+        partes.append("\nCAPA 2 - Stakeholders: " + "; ".join(
+            f"{s.get('stakeholder','')}: {s.get('interes','')}" for s in c2["mapa_stakeholders"]
+        ))
+    if c2.get("tensiones_de_valores"):
+        partes.append("Tensiones de valores: " + "; ".join(
+            f"{t.get('valor_a','')} vs {t.get('valor_b','')}" for t in c2["tensiones_de_valores"]
+        ))
+    if c3.get("preguntas_deliberativas"):
+        partes.append("\nCAPA 3 - Preguntas deliberativas abiertas: " + " | ".join(
+            c3["preguntas_deliberativas"]
+        ))
+    if analisis.limitaciones:
+        partes.append(f"\nLimitaciones del analisis: {analisis.limitaciones}")
+    return "\n".join(partes)
+
+
+@router.post("/requisitos/{requisito_id}/chat", response_model=ChatResponse)
+def chat_requisito(
+    requisito_id: uuid.UUID,
+    payload: ChatRequest,
+    db: Session = Depends(get_db),
+):
+    """Conversa con el asistente de etica sobre ESTE requisito y su analisis.
+
+    El asistente acompaña la deliberacion: no decide por el equipo, ayuda a pensar.
+    """
+    req = db.get(Requisito, requisito_id)
+    if req is None:
+        raise HTTPException(status_code=404, detail="Requisito no encontrado")
+
+    analisis = _ultimo_analisis(db, requisito_id)
+    contexto = _contexto_chat(db, req, analisis)
+    system = (
+        "Eres un asistente de etica de requisitos de software con IA que acompaña "
+        "la deliberacion de un equipo. Conversas de forma clara y breve, haces "
+        "preguntas cuando ayudan, y NO decides por el equipo: el humano siempre "
+        "decide. Basate en el contexto del requisito y su analisis; si algo no "
+        "esta en el contexto, dilo en vez de inventar.\n\n" + contexto
+    )
+    mensajes = [{"role": m.role, "content": m.content} for m in payload.messages]
+    if not mensajes:
+        raise HTTPException(status_code=400, detail="Faltan mensajes en la conversacion")
+
+    try:
+        reply = get_llm_provider().chat(system, mensajes)
+    except RuntimeError as e:
+        raise HTTPException(status_code=502, detail=str(e))
+    return {"reply": reply}

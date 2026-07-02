@@ -50,7 +50,7 @@ export default function Page() {
       <PageHeader
         eyebrow="Fase 6"
         title="Ranking"
-        subtitle="Puntaje = beneficio + valor ético − costo − riesgo ético residual. Cálculo en vivo, determinista, sin IA."
+        subtitle="Puntaje = beneficio + valor ético − costo − riesgo ético. Cálculo en vivo, determinista, sin IA."
         actions={
           <>
             <button onClick={cargar} className={btnGhost}>Recalcular</button>
@@ -73,7 +73,7 @@ export default function Page() {
               <th className={`${th} text-right`}>Beneficio</th>
               <th className={`${th} text-right`}>Valor ético</th>
               <th className={`${th} text-right`}>Costo</th>
-              <th className={`${th} text-right`}>Riesgo res.</th>
+              <th className={`${th} text-right`}>Riesgo ético</th>
               <th className={`${th} text-right`}>Puntaje</th>
             </tr>
           }
@@ -88,7 +88,7 @@ export default function Page() {
               <td className={`${td} text-right tabular-nums text-emerald-600`}>{it.desglose.beneficio}</td>
               <td className={`${td} text-right tabular-nums text-emerald-600`}>{it.desglose.valor_etico}</td>
               <td className={`${td} text-right tabular-nums text-red-500`}>−{it.desglose.costo}</td>
-              <td className={`${td} text-right tabular-nums text-red-500`}>−{it.desglose.riesgo_etico_residual}</td>
+              <td className={`${td} text-right tabular-nums text-red-500`}>−{it.desglose.riesgo_etico}</td>
               <td className={`${td} text-right`}>
                 <div className="flex items-center justify-end gap-2">
                   <div className="hidden h-1.5 w-24 overflow-hidden rounded-full bg-slate-100 sm:block">
