@@ -289,23 +289,6 @@ export default function Page() {
                 <EmptyState>Este requisito aún no tiene análisis. Pulsa “Analizar con IA”.</EmptyState>
               ) : (
                 <>
-                  {/* Metadatos */}
-                  <Card>
-                    <div className="flex flex-wrap items-center gap-x-6 gap-y-2 px-5 py-3 text-sm">
-                      <span className="flex items-center gap-2 text-slate-500">Origen <Badge tone="teal">{analisis.generado_por}</Badge></span>
-                      <span className="flex items-center gap-2 text-slate-500">Modelo <span className="font-medium text-slate-700">{analisis.modelo_usado || "—"}</span></span>
-                      <span className="flex items-center gap-2 text-slate-500">
-                        Confianza
-                        <Dot tone={confianzaTone(confianza)} />
-                        <select className="field-sm" value={confianza} onChange={(e) => setConfianza(e.target.value)}>
-                          <option value="alta">alta</option>
-                          <option value="media">media</option>
-                          <option value="baja">baja</option>
-                        </select>
-                      </span>
-                    </div>
-                  </Card>
-
                   {/* Capa 1 */}
                   <Card>
                     <CardBody>
@@ -332,32 +315,50 @@ export default function Page() {
                                   Quitar
                                 </button>
                               </div>
-                              <div className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2">
+                              <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2">
                                 <Campo label="Tema" className="sm:col-span-2">
-                                  <input className="field-sm font-medium" placeholder="p. ej. Falta de transparencia" value={t.tema_etico} onChange={(e) => setTema(i, "tema_etico", e.target.value)} />
+                                  <input className="field font-medium" placeholder="p. ej. Falta de transparencia" value={t.tema_etico} onChange={(e) => setTema(i, "tema_etico", e.target.value)} />
                                 </Campo>
                                 <Campo label="Actor afectado">
-                                  <input className="field-sm" placeholder="p. ej. Personas postulantes" value={t.actor_afectado ?? ""} onChange={(e) => setTema(i, "actor_afectado", e.target.value)} />
+                                  <input className="field" placeholder="p. ej. Personas postulantes" value={t.actor_afectado ?? ""} onChange={(e) => setTema(i, "actor_afectado", e.target.value)} />
                                 </Campo>
                                 <Campo label="Tipo de daño">
-                                  <input className="field-sm" placeholder="p. ej. exclusión injusta" value={t.tipo_dano ?? ""} onChange={(e) => setTema(i, "tipo_dano", e.target.value)} />
+                                  <input className="field" placeholder="p. ej. exclusión injusta" value={t.tipo_dano ?? ""} onChange={(e) => setTema(i, "tipo_dano", e.target.value)} />
                                 </Campo>
                                 <Campo label="Norma tensionada (norma + artículo)" className="sm:col-span-2">
-                                  <textarea className="field-sm" rows={2} placeholder="p. ej. EU AI Act, Anexo III(4)" value={t.norma_tensionada_texto ?? ""} onChange={(e) => setTema(i, "norma_tensionada_texto", e.target.value)} />
+                                  <textarea className="field resize-y" rows={2} placeholder="p. ej. EU AI Act, Anexo III(4)" value={t.norma_tensionada_texto ?? ""} onChange={(e) => setTema(i, "norma_tensionada_texto", e.target.value)} />
                                 </Campo>
                                 <Campo label="Evidencia" className="sm:col-span-2">
-                                  <textarea className="field-sm" rows={2} placeholder="Por qué se detecta este tema" value={t.evidencia ?? ""} onChange={(e) => setTema(i, "evidencia", e.target.value)} />
+                                  <textarea className="field resize-y" rows={3} placeholder="Por qué se detecta este tema" value={t.evidencia ?? ""} onChange={(e) => setTema(i, "evidencia", e.target.value)} />
                                 </Campo>
-                                {citasReales.length > 0 && (
-                                  <div className="rounded-lg border border-slate-200 bg-white p-3 text-xs text-slate-500 sm:col-span-2">
-                                    <span className="font-semibold text-slate-600">Citas normativas</span>
-                                    <ul className="mt-1 ml-4 list-disc space-y-0.5">
+                                <div className="rounded-lg border border-slate-200 bg-white p-3 text-sm sm:col-span-2">
+                                  <div className="mb-1.5 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
+                                    <span>📎 Citas normativas</span>
+                                    <span className="font-normal normal-case text-slate-400">respaldo del RAG</span>
+                                  </div>
+                                  {citasReales.length > 0 ? (
+                                    <ul className="space-y-1.5">
                                       {citasReales.map((c, k) => (
-                                        <li key={k}>{c.texto_citado}{c.chunk_id ? "" : " (sin respaldo verificado)"}</li>
+                                        <li key={k} className="flex gap-2 text-slate-600">
+                                          <span className="text-accent-500">›</span>
+                                          <span>
+                                            {c.texto_citado}
+                                            {c.chunk_id ? (
+                                              <Badge tone="green">verificada</Badge>
+                                            ) : (
+                                              <span className="ml-1 text-xs text-amber-600">(sin respaldo verificado)</span>
+                                            )}
+                                          </span>
+                                        </li>
                                       ))}
                                     </ul>
-                                  </div>
-                                )}
+                                  ) : (
+                                    <p className="text-xs text-slate-400">
+                                      Sin citas recuperadas. Ingresa el corpus normativo y un proveedor de
+                                      embeddings activo para que el RAG cite artículos concretos.
+                                    </p>
+                                  )}
+                                </div>
                               </div>
                             </div>
                             );
@@ -386,7 +387,7 @@ export default function Page() {
                             <div key={d.id} className="grid grid-cols-1 gap-2 rounded-lg border border-slate-200 p-3 sm:grid-cols-[1fr_150px_90px_auto] sm:items-end">
                               <Campo label="Nombre">
                                 <input
-                                  className="field-sm"
+                                  className="field-sm w-full"
                                   value={d.nombre}
                                   onChange={(e) => setDimsEticas(dimsEticas.map((x) => (x.id === d.id ? { ...x, nombre: e.target.value } : x)))}
                                   onBlur={(e) => onEditarDimEtica(d.id, { nombre: e.target.value })}
@@ -394,7 +395,7 @@ export default function Page() {
                               </Campo>
                               <Campo label="Tipo">
                                 <select
-                                  className="field-sm"
+                                  className="field-sm w-full"
                                   value={d.tipo}
                                   onChange={(e) => onEditarDimEtica(d.id, { tipo: e.target.value as TipoDimension })}
                                 >
@@ -407,7 +408,7 @@ export default function Page() {
                                   type="number"
                                   min={1}
                                   max={5}
-                                  className="field-sm text-center"
+                                  className="field-sm w-full text-center"
                                   value={d.peso ?? 3}
                                   onChange={(e) => setDimsEticas(dimsEticas.map((x) => (x.id === d.id ? { ...x, peso: Number(e.target.value) } : x)))}
                                   onBlur={(e) => onEditarDimEtica(d.id, { peso: Number(e.target.value) })}
@@ -518,11 +519,26 @@ export default function Page() {
                     </CardBody>
                   </Card>
 
-                  {/* Limitaciones + guardar */}
+                  {/* Limitaciones + confianza + guardar */}
                   <Card>
                     <CardBody>
-                      <label className={labelCls}>Limitaciones</label>
-                      <textarea className="field mt-1" rows={2} value={limitaciones} onChange={(e) => setLimitaciones(e.target.value)} />
+                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_auto] sm:items-start">
+                        <div>
+                          <label className={labelCls}>Limitaciones</label>
+                          <textarea className="field mt-1 resize-y" rows={2} value={limitaciones} onChange={(e) => setLimitaciones(e.target.value)} />
+                        </div>
+                        <div>
+                          <label className={labelCls}>Confianza</label>
+                          <div className="mt-1 flex items-center gap-2">
+                            <Dot tone={confianzaTone(confianza)} />
+                            <select className="field-sm" value={confianza} onChange={(e) => setConfianza(e.target.value)}>
+                              <option value="alta">alta</option>
+                              <option value="media">media</option>
+                              <option value="baja">baja</option>
+                            </select>
+                          </div>
+                        </div>
+                      </div>
                       <button onClick={onGuardarAnalisis} className={`${btnDark} mt-3`}>Guardar cambios del análisis</button>
                     </CardBody>
                   </Card>
