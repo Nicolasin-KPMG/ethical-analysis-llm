@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -23,6 +24,21 @@ body {
 }
 .sidebar-scroll::-webkit-scrollbar-thumb {
   background-color: rgb(255 255 255 / 0.12);
+}
+
+/* Animación de entrada de los toasts (deslizan desde la derecha). */
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(1rem);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.animate-toast-in {
+  animation: toast-in 0.18s ease-out;
 }
 
 /* Inputs base coherentes en toda la app. */

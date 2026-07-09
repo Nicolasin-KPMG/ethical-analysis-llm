@@ -24,6 +24,7 @@ import {
   chatRequisito,
 } from "../../lib/api";
 import { useProyecto } from "../../components/ProyectoContext";
+import { useToast } from "../../components/Toast";
 import ProgresoAnalisis from "../../components/ProgresoAnalisis";
 import {
   Card,
@@ -69,7 +70,7 @@ export default function Page() {
   const [cribando, setCribando] = useState(false);
   const [verDescartados, setVerDescartados] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [msg, setMsg] = useState<string | null>(null);
+  const toast = useToast();
 
   const [decision, setDecision] = useState<Decision>("aceptar");
   const [justificacion, setJustificacion] = useState("");
@@ -103,7 +104,6 @@ export default function Page() {
 
   useEffect(() => {
     if (!selId) return;
-    setMsg(null);
     setError(null);
     setChat([]);
     setChatInput("");
@@ -180,12 +180,11 @@ export default function Page() {
     if (!proyectoId) return;
     setCribando(true);
     setError(null);
-    setMsg(null);
     try {
       const rs = await cribarProyecto(proyectoId);
       setRequisitos(rs.filter((r) => r.es_vigente !== false && r.estado !== "eliminado"));
       const n = rs.filter((r) => r.riesgo_preliminar).length;
-      setMsg(`Pre-análisis listo: ${n} requisito(s) con posible riesgo ético para analizar en detalle.`);
+      toast.exito(`Pre-análisis listo: ${n} requisito(s) con posible riesgo ético.`);
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -198,14 +197,13 @@ export default function Page() {
     if (!id) return;
     setAnalizandoIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
     setError(null);
-    setMsg(null);
     try {
       const resultado = await analizarRequisito(id);
       // Solo pintamos el resultado si el usuario sigue viendo ESTE requisito.
       if (selIdRef.current === id) {
         cargarAnalisis(resultado);
         cargarDimsEticas();
-        setMsg("Análisis generado por el LLM. Revísalo y edítalo libremente.");
+        toast.exito("Análisis generado. Revísalo y edítalo libremente.");
       }
       // La lista (estado/puntos) se refresca siempre.
       listarRequisitos(proyectoId)
@@ -222,7 +220,7 @@ export default function Page() {
     setError(null);
     try {
       cargarAnalisis(await editarAnalisis(selId, { nivel_confianza: confianza, limitaciones, temas }));
-      setMsg("Cambios del análisis guardados.");
+      toast.exito("Cambios del análisis guardados.");
     } catch (e: any) {
       setError(e.message);
     }
@@ -241,13 +239,19 @@ export default function Page() {
       const rs = await listarRequisitos(proyectoId);
       setRequisitos(rs.filter((r) => r.es_vigente !== false && r.estado !== "eliminado"));
       if (decision === "reformular" && res.nuevo_requisito_id) {
-        setMsg("Se creó una versión nueva (pendiente de re-análisis). La anterior quedó archivada.");
+        toast.exito("Tratamiento registrado: reformulado (nueva versión creada).");
         setSelId(res.nuevo_requisito_id);
-      } else if (decision === "mitigar") setMsg(`Se crearon ${res.derivados_ids.length} requisito(s) derivado(s).`);
-      else if (decision === "eliminar") { setMsg("Requisito marcado como eliminado."); setSelId(null); }
-      else setMsg("Tratamiento registrado: aceptado.");
+      } else if (decision === "mitigar") {
+        toast.exito(`Tratamiento registrado: mitigado (${res.derivados_ids.length} derivado/s).`);
+      } else if (decision === "eliminar") {
+        toast.exito("Tratamiento registrado: eliminado.");
+        setSelId(null);
+      } else {
+        toast.exito("Tratamiento registrado: aceptado.");
+      }
     } catch (e: any) {
       setError(e.message);
+      toast.error("No se pudo registrar el tratamiento.");
     }
   }
   function setTema(i: number, campo: keyof Tema, valor: string) {
@@ -273,7 +277,6 @@ export default function Page() {
       />
 
       {error && <Alert>{error}</Alert>}
-      {msg && <Alert tone="green">{msg}</Alert>}
 
       {cribando && (
         <div className="mb-5">
