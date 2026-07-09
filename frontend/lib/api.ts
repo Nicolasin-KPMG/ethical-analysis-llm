@@ -304,7 +304,14 @@ export const configurarNormasActivas = (
 
 // --- Fases 2-3: análisis ético y tratamiento (M5) ---
 
-export type Cita = { chunk_id?: string | null; texto_citado?: string | null };
+export type Cita = {
+  chunk_id?: string | null;
+  texto_citado?: string | null;
+  // Procedencia: de qué norma/artículo proviene el fragmento citado.
+  documento?: string | null;
+  referencia?: string | null;
+  jurisdiccion?: string | null;
+};
 
 export type Tema = {
   id?: string;

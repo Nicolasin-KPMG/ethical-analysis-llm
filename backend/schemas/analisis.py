@@ -133,6 +133,10 @@ class AnalisisLLM(BaseModel):
 class CitaOut(BaseModel):
     chunk_id: Optional[uuid.UUID] = None
     texto_citado: Optional[str] = None
+    # Procedencia del fragmento citado (para mostrar de qué norma/artículo viene).
+    documento: Optional[str] = None
+    referencia: Optional[str] = None
+    jurisdiccion: Optional[str] = None
 
 
 class TemaOut(BaseModel):

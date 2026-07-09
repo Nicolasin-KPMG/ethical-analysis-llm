@@ -3,7 +3,7 @@
 // Fases 2-3 — Análisis ético (LLM + RAG) y tratamiento.
 // El LLM identifica, analiza y propone; el humano edita y decide. Re-análisis manual.
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Requisito,
   Analisis,
@@ -62,7 +62,10 @@ export default function Page() {
   const [confianza, setConfianza] = useState("media");
   const [limitaciones, setLimitaciones] = useState("");
 
-  const [analizando, setAnalizando] = useState(false);
+  // Ids de requisitos que se están analizando ahora mismo. Al cambiar de
+  // requisito, el análisis en curso sigue "pegado" a su requisito: puedes ver
+  // los demás y el resultado aparece cuando vuelves al que se estaba analizando.
+  const [analizandoIds, setAnalizandoIds] = useState<string[]>([]);
   const [cribando, setCribando] = useState(false);
   const [verDescartados, setVerDescartados] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -83,6 +86,13 @@ export default function Page() {
   const [chatCargando, setChatCargando] = useState(false);
 
   const seleccionado = requisitos.find((r) => r.id === selId) || null;
+
+  // Referencia siempre-actual del requisito visible, para decidir al terminar un
+  // análisis si el usuario sigue mirándolo (y aplicar el resultado) o no.
+  const selIdRef = useRef(selId);
+  useEffect(() => {
+    selIdRef.current = selId;
+  }, [selId]);
 
   useEffect(() => {
     if (!proyectoId) return setRequisitos([]);
@@ -184,22 +194,27 @@ export default function Page() {
   }
 
   async function onAnalizar() {
-    if (!selId) return;
-    setAnalizando(true);
+    const id = selId;
+    if (!id) return;
+    setAnalizandoIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
     setError(null);
     setMsg(null);
     try {
-      cargarAnalisis(await analizarRequisito(selId));
-      cargarDimsEticas();
-      // Refresca la lista para que el punto de estado del requisito quede al día.
+      const resultado = await analizarRequisito(id);
+      // Solo pintamos el resultado si el usuario sigue viendo ESTE requisito.
+      if (selIdRef.current === id) {
+        cargarAnalisis(resultado);
+        cargarDimsEticas();
+        setMsg("Análisis generado por el LLM. Revísalo y edítalo libremente.");
+      }
+      // La lista (estado/puntos) se refresca siempre.
       listarRequisitos(proyectoId)
         .then((rs) => setRequisitos(rs.filter((r) => r.es_vigente !== false && r.estado !== "eliminado")))
         .catch(() => {});
-      setMsg("Análisis generado por el LLM. Revísalo y edítalo libremente.");
     } catch (e: any) {
-      setError(e.message);
+      if (selIdRef.current === id) setError(e.message);
     } finally {
-      setAnalizando(false);
+      setAnalizandoIds((prev) => prev.filter((x) => x !== id));
     }
   }
   async function onGuardarAnalisis() {
@@ -314,6 +329,12 @@ export default function Page() {
                         {r.codigo} · {r.estado}
                       </span>
                     </span>
+                    {analizandoIds.includes(r.id) && (
+                      <span
+                        title="Analizando…"
+                        className="mt-1 h-3.5 w-3.5 flex-shrink-0 animate-spin rounded-full border-2 border-slate-200 border-t-accent-500"
+                      />
+                    )}
                   </button>
                 </li>
               );
@@ -389,14 +410,22 @@ export default function Page() {
                         </p>
                       )}
                     </div>
-                    <button onClick={onAnalizar} disabled={analizando} className={btnPrimary}>
-                      {analizando ? "Analizando…" : analisis ? "Re-analizar con IA" : "Analizar con IA"}
+                    <button
+                      onClick={onAnalizar}
+                      disabled={!!selId && analizandoIds.includes(selId)}
+                      className={btnPrimary}
+                    >
+                      {selId && analizandoIds.includes(selId)
+                        ? "Analizando…"
+                        : analisis
+                          ? "Re-analizar con IA"
+                          : "Analizar con IA"}
                     </button>
                   </div>
                 </CardBody>
               </Card>
 
-              {analizando ? (
+              {selId && analizandoIds.includes(selId) ? (
                 <ProgresoAnalisis
                   etapas={[
                     "Primera pasada del LLM (temas preliminares)…",
@@ -457,20 +486,35 @@ export default function Page() {
                                     <span className="font-normal normal-case text-slate-400">respaldo del RAG</span>
                                   </div>
                                   {citasReales.length > 0 ? (
-                                    <ul className="space-y-1.5">
-                                      {citasReales.map((c, k) => (
-                                        <li key={k} className="flex gap-2 text-slate-600">
-                                          <span className="text-accent-500">›</span>
-                                          <span>
-                                            {c.texto_citado}
-                                            {c.chunk_id ? (
-                                              <Badge tone="green">verificada</Badge>
-                                            ) : (
-                                              <span className="ml-1 text-xs text-amber-600">(sin respaldo verificado)</span>
-                                            )}
-                                          </span>
-                                        </li>
-                                      ))}
+                                    <ul className="space-y-3">
+                                      {citasReales.map((c, k) => {
+                                        const fuente = [c.documento, c.referencia]
+                                          .filter((x) => (x ?? "").trim())
+                                          .join(" · ");
+                                        return (
+                                          <li key={k} className="flex gap-2 text-slate-600">
+                                            <span className="mt-0.5 text-accent-500">›</span>
+                                            <div className="min-w-0 flex-1">
+                                              <p className="italic">“{c.texto_citado}”</p>
+                                              <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+                                                {fuente ? (
+                                                  <span className="rounded bg-slate-100 px-1.5 py-0.5 text-xs font-medium text-slate-600">
+                                                    {fuente}
+                                                    {c.jurisdiccion ? ` (${c.jurisdiccion})` : ""}
+                                                  </span>
+                                                ) : (
+                                                  <span className="text-xs text-slate-400">Fuente no identificada</span>
+                                                )}
+                                                {c.chunk_id ? (
+                                                  <Badge tone="green">verificada</Badge>
+                                                ) : (
+                                                  <span className="text-xs text-amber-600">sin respaldo verificado</span>
+                                                )}
+                                              </div>
+                                            </div>
+                                          </li>
+                                        );
+                                      })}
                                     </ul>
                                   ) : (
                                     <p className="text-xs text-slate-400">

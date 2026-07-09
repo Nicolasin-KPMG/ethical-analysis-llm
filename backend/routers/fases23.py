@@ -25,6 +25,8 @@ from models import (
     AnalisisEtico,
     TemaEticoDetectado,
     CitaNormativa,
+    ChunkNormativo,
+    DocumentoNormativo,
     Tratamiento,
     RelacionRequisito,
 )
@@ -75,6 +77,31 @@ def banderas_proyecto(proyecto_id: uuid.UUID, db: Session = Depends(get_db)):
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+def _cita_out(db: Session, c: CitaNormativa) -> dict:
+    """Cita + procedencia (norma, artículo, jurisdicción) del fragmento citado.
+
+    Así en la UI cada cita muestra de qué documento y artículo proviene, no solo
+    el texto. Si la cita no tiene un chunk real enlazado, la procedencia va vacía.
+    """
+    documento = referencia = jurisdiccion = None
+    if c.chunk_id:
+        chunk = db.get(ChunkNormativo, c.chunk_id)
+        if chunk is not None:
+            referencia = chunk.referencia
+            if chunk.documento_id:
+                doc = db.get(DocumentoNormativo, chunk.documento_id)
+                if doc is not None:
+                    documento = doc.nombre
+                    jurisdiccion = doc.jurisdiccion
+    return {
+        "chunk_id": c.chunk_id,
+        "texto_citado": c.texto_citado,
+        "documento": documento,
+        "referencia": referencia,
+        "jurisdiccion": jurisdiccion,
+    }
+
+
 def _analisis_out(db: Session, analisis: AnalisisEtico) -> dict:
     """Arma el AnalisisOut: el analisis + sus temas (Capa 1) con citas."""
     temas = (
@@ -95,10 +122,7 @@ def _analisis_out(db: Session, analisis: AnalisisEtico) -> dict:
                 "tipo_dano": t.tipo_dano,
                 "norma_tensionada_texto": t.norma_tensionada_texto,
                 "evidencia": t.evidencia,
-                "citas": [
-                    {"chunk_id": c.chunk_id, "texto_citado": c.texto_citado}
-                    for c in citas
-                ],
+                "citas": [_cita_out(db, c) for c in citas],
             }
         )
     return {
