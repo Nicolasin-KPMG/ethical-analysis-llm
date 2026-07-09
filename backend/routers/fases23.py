@@ -13,12 +13,15 @@ Reglas de negocio aplicadas (criticas, ver seccion 3 del contexto):
 - El humano decide siempre; el re-analisis es una accion explicita (este endpoint).
 """
 
+import logging
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from database import get_db
+
+logger = logging.getLogger(__name__)
 from models import (
     Proyecto,
     Requisito,
@@ -312,6 +315,16 @@ def crear_tratamiento(
     db.add(tratamiento)
     db.commit()
     db.refresh(tratamiento)
+
+    # Al mitigar, cada control derivado se auto-analiza con enfoque positivo
+    # (es una salvaguarda). Tolerante a fallos: si el LLM/RAG no responde, el
+    # derivado igual queda creado y se puede analizar luego a mano.
+    if payload.decision == "mitigar":
+        for did in derivados_ids:
+            try:
+                analizar_requisito(db, did)
+            except Exception:
+                logger.warning("No se pudo auto-analizar el derivado %s", did)
 
     return {
         "id": tratamiento.id,

@@ -65,6 +65,7 @@ export default function Page() {
   // los demás y el resultado aparece cuando vuelves al que se estaba analizando.
   const [analizandoIds, setAnalizandoIds] = useState<string[]>([]);
   const [cribando, setCribando] = useState(false);
+  const [tratando, setTratando] = useState(false);
   const [verDescartados, setVerDescartados] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const toast = useToast();
@@ -225,6 +226,8 @@ export default function Page() {
   async function onTratar() {
     if (!selId) return;
     setError(null);
+    setTratando(true);
+    if (decision === "mitigar") toast.info("Registrando y analizando los controles…");
     try {
       const res = await crearTratamiento(selId, {
         decision,
@@ -249,6 +252,8 @@ export default function Page() {
     } catch (e: any) {
       setError(e.message);
       toast.error("No se pudo registrar el tratamiento.");
+    } finally {
+      setTratando(false);
     }
   }
   function setTema(i: number, campo: keyof Tema, valor: string) {
@@ -731,7 +736,13 @@ export default function Page() {
                       )}
 
                       <textarea className="field mt-3" rows={2} placeholder="Justificación de la decisión" value={justificacion} onChange={(e) => setJustificacion(e.target.value)} />
-                      <button onClick={onTratar} className={`${btnPrimary} mt-2`}>Registrar tratamiento</button>
+                      <button onClick={onTratar} disabled={tratando} className={`${btnPrimary} mt-2`}>
+                        {tratando
+                          ? decision === "mitigar"
+                            ? "Analizando controles…"
+                            : "Procesando…"
+                          : "Registrar tratamiento"}
+                      </button>
                     </CardBody>
                   </Card>
                 </>

@@ -141,6 +141,51 @@ def _contexto_reformulacion(db, req: Requisito) -> str:
     )
 
 
+def _contexto_mitigacion(db, req: Requisito) -> str:
+    """Si el requisito es un CONTROL DE MITIGACION (derivado, origen_requisito_id),
+    arma un contexto que enmarca el analisis en POSITIVO: es una salvaguarda que
+    reduce los riesgos del requisito de origen, no una funcionalidad de riesgo.
+    """
+    if not req.origen_requisito_id:
+        return ""
+    padre = db.get(Requisito, req.origen_requisito_id)
+    if padre is None:
+        return ""
+
+    riesgos = ""
+    analisis_padre = (
+        db.query(AnalisisEtico)
+        .filter(AnalisisEtico.requisito_id == padre.id)
+        .order_by(AnalisisEtico.creado_en.desc())
+        .first()
+    )
+    if analisis_padre is not None:
+        temas = (
+            db.query(TemaEticoDetectado)
+            .filter(TemaEticoDetectado.analisis_id == analisis_padre.id)
+            .all()
+        )
+        if temas:
+            riesgos = "\nEl requisito de origen tenia estos riesgos eticos:\n" + "\n".join(
+                f"  - {t.tema_etico}" for t in temas
+            )
+    padre_texto = padre.nombre + (f": {padre.descripcion}" if padre.descripcion else "")
+
+    return (
+        "\n\nESTE REQUISITO ES UN CONTROL DE MITIGACION: una salvaguarda creada para "
+        "REDUCIR los riesgos eticos de otro requisito (su origen), no una nueva "
+        "funcionalidad que agregue riesgo.\n"
+        f"Requisito de origen: {padre_texto}" + riesgos + "\n\n"
+        "ANALIZA ESTE CONTROL CON ENFOQUE POSITIVO:\n"
+        "- En capa_1, describe COMO este control ayuda a abordar o reducir esos "
+        "riesgos (su aporte etico), en vez de buscarle nuevos danos.\n"
+        "- NO detectes riesgos eticos nuevos salvo que sean evidentes e inevitables.\n"
+        "- Deja 'dimensiones_eticas' VACIA: un control de mitigacion no debe agregar "
+        "dimensiones de riesgo al proyecto.\n"
+        "- En capa_3, la decision natural suele ser 'aceptar' (ya es una salvaguarda)."
+    )
+
+
 def _prompt_pass2(req: Requisito, fragmentos: list[dict], contexto_extra: str = "") -> str:
     if fragmentos:
         ctx = "\n\n".join(
@@ -301,13 +346,19 @@ def analizar_requisito(db, requisito_id, llm_provider=None, embed_provider=None,
         db, req, pass1.consultas_rag, embed, k, max_fragmentos
     )
 
-    # 3) Segunda pasada (las tres capas). Si el requisito es una reformulacion,
-    #    se le da al LLM el contexto de los riesgos de la version anterior para que
-    #    evalue si se redujeron, en vez de re-detectarlos desde cero.
-    contexto_ref = _contexto_reformulacion(db, req)
-    pass2 = AnalisisLLM(
-        **llm.analyze(_prompt_pass2(req, fragmentos, contexto_ref), AnalisisLLM.model_json_schema())
+    # 3) Segunda pasada (las tres capas). El contexto extra depende del origen:
+    #    - Mitigacion (derivado): enfoque POSITIVO, es una salvaguarda.
+    #    - Reformulacion: evaluar si se redujeron los riesgos de la version previa.
+    es_mitigacion = req.origen_requisito_id is not None
+    contexto_extra = (
+        _contexto_mitigacion(db, req) if es_mitigacion else _contexto_reformulacion(db, req)
     )
+    pass2 = AnalisisLLM(
+        **llm.analyze(_prompt_pass2(req, fragmentos, contexto_extra), AnalisisLLM.model_json_schema())
+    )
+    # Un control de mitigacion NO agrega dimensiones al proyecto (enfoque positivo).
+    if es_mitigacion:
+        pass2.dimensiones_eticas = []
 
     # 4) Confianza fijada en "alta" por decision del proyecto. Si no hubo
     #    recuperacion normativa igual se deja constancia en las limitaciones.
