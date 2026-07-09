@@ -48,5 +48,8 @@ class RequisitoOut(BaseModel):
     es_vigente: bool | None = None
     version_anterior_id: uuid.UUID | None = None
     origen_requisito_id: uuid.UUID | None = None
+    # Pre-fase (cribado): None = no cribado; True = con riesgo potencial; False = sin riesgo.
+    riesgo_preliminar: bool | None = None
+    motivo_preliminar: str | None = None
 
     model_config = {"from_attributes": True}

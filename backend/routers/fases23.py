@@ -37,10 +37,27 @@ from schemas import (
     ChatResponse,
 )
 from services.analysis import analizar_requisito
+from services.cribado import cribar_proyecto
 from services.bandera import bandera_de
 from providers.llm import get_llm_provider
+from schemas import RequisitoOut
 
 router = APIRouter(tags=["fases-2-3"])
+
+
+# ---------------------------------------------------------------------------
+# Pre-fase: cribado (marca que requisitos podrian tener riesgo etico)
+# ---------------------------------------------------------------------------
+@router.post("/proyectos/{proyecto_id}/cribado", response_model=list[RequisitoOut])
+def cribar(proyecto_id: uuid.UUID, db: Session = Depends(get_db)):
+    """Pre-analisis por lote: clasifica todos los requisitos vigentes del proyecto
+    y marca cuales podrian tener riesgo etico (riesgo_preliminar)."""
+    if db.get(Proyecto, proyecto_id) is None:
+        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+    try:
+        return cribar_proyecto(db, proyecto_id)
+    except RuntimeError as e:
+        raise HTTPException(status_code=502, detail=str(e))
 
 
 @router.get("/proyectos/{proyecto_id}/banderas")

@@ -14,6 +14,7 @@ import {
   ChatMessage,
   listarRequisitos,
   analizarRequisito,
+  cribarProyecto,
   obtenerAnalisis,
   editarAnalisis,
   crearTratamiento,
@@ -23,6 +24,7 @@ import {
   chatRequisito,
 } from "../../lib/api";
 import { useProyecto } from "../../components/ProyectoContext";
+import ProgresoAnalisis from "../../components/ProgresoAnalisis";
 import {
   Card,
   CardBody,
@@ -61,6 +63,8 @@ export default function Page() {
   const [limitaciones, setLimitaciones] = useState("");
 
   const [analizando, setAnalizando] = useState(false);
+  const [cribando, setCribando] = useState(false);
+  const [verDescartados, setVerDescartados] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -162,6 +166,23 @@ export default function Page() {
     setJustificacion("");
   }
 
+  async function onCribar() {
+    if (!proyectoId) return;
+    setCribando(true);
+    setError(null);
+    setMsg(null);
+    try {
+      const rs = await cribarProyecto(proyectoId);
+      setRequisitos(rs.filter((r) => r.es_vigente !== false && r.estado !== "eliminado"));
+      const n = rs.filter((r) => r.riesgo_preliminar).length;
+      setMsg(`Pre-análisis listo: ${n} requisito(s) con posible riesgo ético para analizar en detalle.`);
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setCribando(false);
+    }
+  }
+
   async function onAnalizar() {
     if (!selId) return;
     setAnalizando(true);
@@ -170,6 +191,10 @@ export default function Page() {
     try {
       cargarAnalisis(await analizarRequisito(selId));
       cargarDimsEticas();
+      // Refresca la lista para que el punto de estado del requisito quede al día.
+      listarRequisitos(proyectoId)
+        .then((rs) => setRequisitos(rs.filter((r) => r.es_vigente !== false && r.estado !== "eliminado")))
+        .catch(() => {});
       setMsg("Análisis generado por el LLM. Revísalo y edítalo libremente.");
     } catch (e: any) {
       setError(e.message);
@@ -225,10 +250,26 @@ export default function Page() {
         eyebrow="Fases 2 y 3"
         title="Análisis ético y tratamiento"
         subtitle="El LLM identifica, analiza y propone; tú editas y decides. El re-análisis es manual."
+        actions={
+          <button onClick={onCribar} disabled={cribando || requisitos.length === 0} className={btnDark}>
+            {cribando ? "Cribando…" : "Ejecutar pre-análisis"}
+          </button>
+        }
       />
 
       {error && <Alert>{error}</Alert>}
       {msg && <Alert tone="green">{msg}</Alert>}
+
+      {cribando && (
+        <div className="mb-5">
+          <ProgresoAnalisis
+            titulo="Pre-análisis (cribado)"
+            subtitulo="Revisando todos los requisitos para detectar cuáles podrían tener riesgo ético."
+            etapas={["Leyendo los requisitos…", "Clasificando riesgo ético…", "Marcando los que entran al análisis…"]}
+            duracionEstimadaMs={12000}
+          />
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-5 md:grid-cols-[260px_1fr]">
         {/* Lista de requisitos */}
@@ -239,22 +280,78 @@ export default function Page() {
           {requisitos.length === 0 ? (
             <p className="px-4 py-4 text-sm text-slate-500">No hay requisitos.</p>
           ) : (
-            <ul className="max-h-[70vh] overflow-y-auto p-2">
-              {requisitos.map((r) => (
+            (() => {
+              // Tras el pre-análisis: los con riesgo (y los aún no cribados) entran;
+              // los descartados (riesgo_preliminar === false) se colapsan aparte.
+              const entran = requisitos.filter((r) => r.riesgo_preliminar !== false);
+              const descartados = requisitos.filter((r) => r.riesgo_preliminar === false);
+              const cribadoHecho = requisitos.some((r) => r.riesgo_preliminar != null);
+
+              const Item = ({ r, mute = false }: { r: Requisito; mute?: boolean }) => (
                 <li key={r.id}>
                   <button
                     onClick={() => setSelId(r.id)}
+                    title={r.motivo_preliminar ?? undefined}
                     className={
-                      "w-full rounded-lg px-3 py-2 text-left text-sm transition " +
+                      "flex w-full items-start gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition " +
                       (selId === r.id ? "bg-accent-50 text-accent-800" : "hover:bg-slate-50")
                     }
                   >
-                    <div className="font-medium text-slate-800">{r.nombre}</div>
-                    <div className="font-mono text-xs text-slate-400">{r.codigo} · {r.estado}</div>
+                    <span className="mt-1.5">
+                      {r.riesgo_preliminar === true ? (
+                        <Dot tone="red" />
+                      ) : r.riesgo_preliminar === false ? (
+                        <Dot tone="slate" />
+                      ) : (
+                        <span className="inline-block h-2.5 w-2.5 rounded-full border border-slate-300" />
+                      )}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className={"block font-medium " + (mute ? "text-slate-500" : "text-slate-800")}>
+                        {r.nombre}
+                      </span>
+                      <span className="block font-mono text-xs text-slate-400">
+                        {r.codigo} · {r.estado}
+                      </span>
+                    </span>
                   </button>
                 </li>
-              ))}
-            </ul>
+              );
+
+              return (
+                <div className="max-h-[70vh] overflow-y-auto p-2">
+                  {cribadoHecho && (
+                    <div className="px-2 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-wider text-red-500">
+                      Con posible riesgo ético ({entran.filter((r) => r.riesgo_preliminar === true).length})
+                    </div>
+                  )}
+                  <ul className="space-y-0.5">
+                    {entran.map((r) => (
+                      <Item key={r.id} r={r} />
+                    ))}
+                  </ul>
+
+                  {descartados.length > 0 && (
+                    <div className="mt-2 border-t border-slate-100 pt-2">
+                      <button
+                        onClick={() => setVerDescartados((v) => !v)}
+                        className="flex w-full items-center justify-between px-2 py-1 text-xs font-medium text-slate-400 hover:text-slate-600"
+                      >
+                        <span>Sin riesgo aparente ({descartados.length})</span>
+                        <span>{verDescartados ? "▲" : "▼"}</span>
+                      </button>
+                      {verDescartados && (
+                        <ul className="space-y-0.5 opacity-70">
+                          {descartados.map((r) => (
+                            <Item key={r.id} r={r} mute />
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })()
           )}
         </Card>
 
@@ -277,6 +374,20 @@ export default function Page() {
                       {seleccionado.descripcion && (
                         <p className="mt-2 text-sm text-slate-600">{seleccionado.descripcion}</p>
                       )}
+                      {seleccionado.riesgo_preliminar === true && (
+                        <div className="mt-3 flex items-start gap-2 rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-700">
+                          <Dot tone="red" />
+                          <span>
+                            <span className="font-medium">Pre-análisis: posible riesgo ético.</span>{" "}
+                            {seleccionado.motivo_preliminar}
+                          </span>
+                        </div>
+                      )}
+                      {seleccionado.riesgo_preliminar === false && (
+                        <p className="mt-3 text-xs text-slate-400">
+                          Pre-análisis: sin riesgo ético aparente. Puedes analizarlo igualmente si lo consideras necesario.
+                        </p>
+                      )}
                     </div>
                     <button onClick={onAnalizar} disabled={analizando} className={btnPrimary}>
                       {analizando ? "Analizando…" : analisis ? "Re-analizar con IA" : "Analizar con IA"}
@@ -285,7 +396,16 @@ export default function Page() {
                 </CardBody>
               </Card>
 
-              {!analisis ? (
+              {analizando ? (
+                <ProgresoAnalisis
+                  etapas={[
+                    "Primera pasada del LLM (temas preliminares)…",
+                    "Recuperando normativa relevante (RAG)…",
+                    "Analizando las tres capas…",
+                    "Guardando el resultado…",
+                  ]}
+                />
+              ) : !analisis ? (
                 <EmptyState>Este requisito aún no tiene análisis. Pulsa “Analizar con IA”.</EmptyState>
               ) : (
                 <>

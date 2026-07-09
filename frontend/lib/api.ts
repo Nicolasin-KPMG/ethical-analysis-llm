@@ -57,6 +57,9 @@ export type Requisito = {
   es_vigente?: boolean | null;
   version_anterior_id?: string | null;
   origen_requisito_id?: string | null;
+  // Pre-fase (cribado): null = no cribado; true = riesgo potencial; false = sin riesgo.
+  riesgo_preliminar?: boolean | null;
+  motivo_preliminar?: string | null;
 };
 
 export type RequisitoInput = {
@@ -343,6 +346,11 @@ export type Decision = "aceptar" | "reformular" | "mitigar" | "eliminar";
 
 export const analizarRequisito = (requisitoId: string) =>
   request<Analisis>(`/requisitos/${requisitoId}/analizar`, { method: "POST" });
+
+// --- Pre-fase: cribado (marca qué requisitos podrían tener riesgo ético) ---
+
+export const cribarProyecto = (proyectoId: string) =>
+  request<Requisito[]>(`/proyectos/${proyectoId}/cribado`, { method: "POST" });
 
 // --- Chat deliberativo sobre un requisito y su análisis ---
 

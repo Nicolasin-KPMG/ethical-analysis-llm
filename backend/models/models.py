@@ -97,6 +97,13 @@ class Requisito(Base):
     estado = Column(Text, server_default=text("'pendiente_de_analisis'"))
     es_vigente = Column(Boolean, server_default=text("true"))
 
+    # Pre-fase (cribado): clasificacion ligera del LLM antes del analisis 2-3.
+    #   None  -> aun no cribado.
+    #   True  -> podria tener riesgo etico: entra al analisis detallado (punto rojo).
+    #   False -> sin riesgo aparente: no entra al analisis.
+    riesgo_preliminar = Column(Boolean)
+    motivo_preliminar = Column(Text)
+
     # Dos self-refs DISTINTOS sobre la misma tabla:
     version_anterior_id = Column(UUID(as_uuid=True), ForeignKey("requisito.id"))
     origen_requisito_id = Column(UUID(as_uuid=True), ForeignKey("requisito.id"))
