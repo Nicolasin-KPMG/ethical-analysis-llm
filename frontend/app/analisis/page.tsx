@@ -49,9 +49,6 @@ const TEMA_VACIO: Tema = {
   citas: [],
 };
 
-function confianzaTone(c?: string | null) {
-  return c === "alta" ? "green" : c === "baja" ? "red" : "amber";
-}
 
 export default function Page() {
   const { proyectoId } = useProyecto();
@@ -686,26 +683,17 @@ export default function Page() {
                     </CardBody>
                   </Card>
 
-                  {/* Limitaciones + confianza + guardar */}
+                  {/* Limitaciones del análisis + guardar */}
                   <Card>
                     <CardBody>
-                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_auto] sm:items-start">
-                        <div>
-                          <label className={labelCls}>Limitaciones</label>
-                          <textarea className="field mt-1 resize-y" rows={2} value={limitaciones} onChange={(e) => setLimitaciones(e.target.value)} />
-                        </div>
-                        <div>
-                          <label className={labelCls}>Confianza</label>
-                          <div className="mt-1 flex items-center gap-2">
-                            <Dot tone={confianzaTone(confianza)} />
-                            <select className="field-sm" value={confianza} onChange={(e) => setConfianza(e.target.value)}>
-                              <option value="alta">alta</option>
-                              <option value="media">media</option>
-                              <option value="baja">baja</option>
-                            </select>
-                          </div>
-                        </div>
-                      </div>
+                      <label className={labelCls}>Limitaciones del análisis</label>
+                      <textarea
+                        className="field mt-1 resize-y"
+                        rows={3}
+                        placeholder="Salvedades del análisis: qué no se pudo evaluar bien, supuestos, advertencias…"
+                        value={limitaciones}
+                        onChange={(e) => setLimitaciones(e.target.value)}
+                      />
                       <button onClick={onGuardarAnalisis} className={`${btnDark} mt-3`}>Guardar cambios del análisis</button>
                     </CardBody>
                   </Card>

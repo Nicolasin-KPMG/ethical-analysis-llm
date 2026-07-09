@@ -1,6 +1,8 @@
 "use client";
 
-// Fase 5 — Matriz requisitos × dimensiones (fuerza 0–5, 0 = no aplica).
+// Fase 5 — Matriz requisitos × dimensiones. La intensidad se elige de forma
+// CUALITATIVA (palabras), pero se guarda como número 0–5 (0 = no aplica) para
+// que la fórmula del ranking no cambie.
 
 import { useEffect, useState } from "react";
 import {
@@ -16,6 +18,16 @@ import { useProyecto } from "../../components/ProyectoContext";
 import { Card, PageHeader, EmptyState, Alert } from "../../components/ui";
 
 const celda = (rid: string, did: string) => `${rid}::${did}`;
+
+// Escala cualitativa de la fuerza (0–5). El usuario elige con palabras.
+const ESCALA_FUERZA: { valor: number; label: string }[] = [
+  { valor: 0, label: "No aplica" },
+  { valor: 1, label: "Muy baja" },
+  { valor: 2, label: "Baja" },
+  { valor: 3, label: "Media" },
+  { valor: 4, label: "Alta" },
+  { valor: 5, label: "Muy alta" },
+];
 
 export default function Page() {
   const { proyectoId } = useProyecto();
@@ -72,7 +84,7 @@ export default function Page() {
       <PageHeader
         eyebrow="Fase 5"
         title="Evaluación"
-        subtitle="Asigna a cada requisito una fuerza de 0 a 5 (0 = no aplica) frente a cada dimensión. Las dimensiones éticas solo aplican a su requisito; en los demás la celda queda fija en 0. Se guarda al salir de la celda."
+        subtitle="Para cada requisito, indica con qué intensidad expresa cada dimensión: de “No aplica” a “Muy alta”. Las dimensiones éticas solo aplican a su requisito; en los demás la celda queda en “No aplica”. Se guarda al elegir."
       />
 
       {error && <Alert>{error}</Alert>}
@@ -105,34 +117,41 @@ export default function Page() {
                     </td>
                     {dimensiones.map((d) => {
                       const key = celda(r.id, d.id);
-                      // La dimensión no aplica a este requisito: celda fija en 0.
+                      // La dimensión no aplica a este requisito: celda fija en "No aplica".
                       const noAplica = d.restringida && !(d.requisitos_aplica ?? []).includes(r.id);
                       if (noAplica) {
                         return (
                           <td key={d.id} className="px-3 py-2 text-center">
-                            <input
-                              type="number"
-                              disabled
+                            <span
                               title="Esta dimensión no aplica a este requisito"
-                              className="field-sm w-16 cursor-not-allowed bg-slate-100 text-center text-slate-400"
-                              value={0}
-                              readOnly
-                            />
+                              className="inline-block rounded-md bg-slate-100 px-2 py-1 text-xs text-slate-400"
+                            >
+                              No aplica
+                            </span>
                           </td>
                         );
                       }
                       return (
                         <td key={d.id} className="px-3 py-2 text-center">
-                          <input
-                            type="number"
-                            min={0}
-                            max={5}
-                            className="field-sm w-16 text-center"
+                          <select
+                            className="field-sm w-28 text-center"
                             value={valores[key] ?? ""}
-                            onChange={(e) => setValores({ ...valores, [key]: e.target.value })}
-                            onBlur={(e) => onGuardarCelda(r.id, d.id, e.target.value)}
-                          />
-                          {guardando === key && <div className="text-xs text-slate-400">…</div>}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              setValores({ ...valores, [key]: v });
+                              if (v !== "") onGuardarCelda(r.id, d.id, v);
+                            }}
+                          >
+                            <option value="" disabled>
+                              Elegir…
+                            </option>
+                            {ESCALA_FUERZA.map((o) => (
+                              <option key={o.valor} value={String(o.valor)}>
+                                {o.label}
+                              </option>
+                            ))}
+                          </select>
+                          {guardando === key && <span className="ml-1 text-xs text-slate-400">…</span>}
                         </td>
                       );
                     })}
