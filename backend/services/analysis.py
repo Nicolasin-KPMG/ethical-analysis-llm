@@ -88,7 +88,60 @@ def _es_vinculante(referencia) -> bool:
     return not any(c in ref for c in _CONECTORES_REF)
 
 
-def _prompt_pass2(req: Requisito, fragmentos: list[dict]) -> str:
+def _contexto_reformulacion(db, req: Requisito) -> str:
+    """Si el requisito es una REFORMULACION, arma un bloque de contexto con los
+    riesgos que detecto el analisis de la version anterior.
+
+    Asi el re-analisis no parte de cero: sabe que la nueva redaccion buscaba
+    REDUCIR esos riesgos y puede evaluar si se lograron, en vez de volver a
+    listar todo como si fuera un requisito nuevo.
+    """
+    if not req.version_anterior_id:
+        return ""
+    prev = db.get(Requisito, req.version_anterior_id)
+    if prev is None:
+        return ""
+    analisis_prev = (
+        db.query(AnalisisEtico)
+        .filter(AnalisisEtico.requisito_id == prev.id)
+        .order_by(AnalisisEtico.creado_en.desc())
+        .first()
+    )
+    if analisis_prev is None:
+        return ""
+    temas = (
+        db.query(TemaEticoDetectado)
+        .filter(TemaEticoDetectado.analisis_id == analisis_prev.id)
+        .all()
+    )
+    if not temas:
+        return ""
+
+    lineas = []
+    for t in temas:
+        extra = f" (dano: {t.tipo_dano})" if t.tipo_dano else ""
+        lineas.append(f"  - {t.tema_etico}{extra}")
+    prev_texto = prev.nombre + (f": {prev.descripcion}" if prev.descripcion else "")
+
+    return (
+        "\n\nESTE REQUISITO ES UNA REFORMULACION de una version anterior, hecha para "
+        "REDUCIR o RESOLVER sus riesgos eticos.\n"
+        f"Version anterior: {prev_texto}\n"
+        "El analisis de esa version anterior detecto estos temas eticos:\n"
+        + "\n".join(lineas)
+        + "\n\nEVALUA LA NUEVA REDACCION frente a esos riesgos:\n"
+        "- Incluye en capa_1 y en dimensiones_eticas SOLO las tensiones que "
+        "REALMENTE PERSISTEN en el texto nuevo.\n"
+        "- Si un riesgo anterior quedo resuelto o claramente mitigado por la nueva "
+        "redaccion, NO lo repitas como dimension de riesgo (o dale un peso bajo) y "
+        "explica en su evidencia/limitaciones que ya fue abordado.\n"
+        "- No agregues riesgos nuevos que la redaccion no justifique. El objetivo de "
+        "una reformulacion es MINIMIZAR el riesgo, y eso debe reflejarse en menos "
+        "dimensiones de riesgo y/o pesos menores que en la version anterior."
+    )
+
+
+def _prompt_pass2(req: Requisito, fragmentos: list[dict], contexto_extra: str = "") -> str:
     if fragmentos:
         ctx = "\n\n".join(
             f"[chunk_id: {f['chunk_id']}] ({f['referencia'] or 's/ref'} — {f.get('tipo','contexto')})\n{f['texto']}"
@@ -124,7 +177,8 @@ def _prompt_pass2(req: Requisito, fragmentos: list[dict]) -> str:
         "minimizar, resta), un peso 1-5 y una justificacion. Solo las que apliquen "
         "realmente a este requisito; si no hay tensiones eticas, deja la lista vacia.\n"
         f"{nota_citas}\n\n"
-        f"REQUISITO:\n{_texto_requisito(req)}\n\n"
+        f"REQUISITO:\n{_texto_requisito(req)}"
+        f"{contexto_extra}\n\n"
         f"FRAGMENTOS NORMATIVOS RECUPERADOS:\n{ctx}"
     )
 
@@ -247,8 +301,13 @@ def analizar_requisito(db, requisito_id, llm_provider=None, embed_provider=None,
         db, req, pass1.consultas_rag, embed, k, max_fragmentos
     )
 
-    # 3) Segunda pasada (las tres capas).
-    pass2 = AnalisisLLM(**llm.analyze(_prompt_pass2(req, fragmentos), AnalisisLLM.model_json_schema()))
+    # 3) Segunda pasada (las tres capas). Si el requisito es una reformulacion,
+    #    se le da al LLM el contexto de los riesgos de la version anterior para que
+    #    evalue si se redujeron, en vez de re-detectarlos desde cero.
+    contexto_ref = _contexto_reformulacion(db, req)
+    pass2 = AnalisisLLM(
+        **llm.analyze(_prompt_pass2(req, fragmentos, contexto_ref), AnalisisLLM.model_json_schema())
+    )
 
     # 4) Confianza fijada en "alta" por decision del proyecto. Si no hubo
     #    recuperacion normativa igual se deja constancia en las limitaciones.
