@@ -12,7 +12,9 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from config import settings
+from services.auth import get_current_user
 from routers import (
+    auth,
     proyectos,
     requisitos,
     dimensiones,
@@ -59,24 +61,31 @@ def health(db: Session = Depends(get_db)):
     }
 
 
+# Router de autenticacion (abierto: registro y login no exigen token).
+app.include_router(auth.router)
+
+# El resto de la API exige un usuario autenticado. Se aplica de forma central
+# como dependencia al montar cada router, para no tocar cada endpoint.
+protegido = [Depends(get_current_user)]
+
 # Routers de la Fase 1.
-app.include_router(proyectos.router)
-app.include_router(requisitos.router)
+app.include_router(proyectos.router, dependencies=protegido)
+app.include_router(requisitos.router, dependencies=protegido)
 
 # Routers de M2 (Fases 4, 5 y 6).
-app.include_router(dimensiones.router)
-app.include_router(evaluaciones.router)
-app.include_router(ranking.router)
+app.include_router(dimensiones.router, dependencies=protegido)
+app.include_router(evaluaciones.router, dependencies=protegido)
+app.include_router(ranking.router, dependencies=protegido)
 
 # Router de M3 (Fase 8, visualizacion).
-app.include_router(visualizacion.router)
+app.include_router(visualizacion.router, dependencies=protegido)
 
 # Router de M4 (documentos normativos y normas activas, para el RAG).
-app.include_router(documentos.router)
+app.include_router(documentos.router, dependencies=protegido)
 
 # Router de M5 (Fases 2-3: analisis etico y tratamiento).
-app.include_router(fases23.router)
+app.include_router(fases23.router, dependencies=protegido)
 
 # Routers de M6 (Fase 7: relaciones/trazabilidad; y exportacion del proyecto).
-app.include_router(relaciones.router)
-app.include_router(export.router)
+app.include_router(relaciones.router, dependencies=protegido)
+app.include_router(export.router, dependencies=protegido)

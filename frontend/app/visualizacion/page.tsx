@@ -3,7 +3,7 @@
 // Fase 8 — Visualización del ranking (auditable) + bandera ética + export CSV.
 
 import { useEffect, useState } from "react";
-import { VisualizacionItem, BanderaEtica, obtenerVisualizacion, urlExportCsv } from "../../lib/api";
+import { VisualizacionItem, BanderaEtica, obtenerVisualizacion, descargarConAuth } from "../../lib/api";
 import { useProyecto } from "../../components/ProyectoContext";
 import { PageHeader, Table, Dot, EmptyState, Alert, Card, th, td, btnDark } from "../../components/ui";
 
@@ -34,7 +34,17 @@ export default function Page() {
         subtitle="Ranking ordenado y auditable, con desglose por requisito. La bandera ética informa, no bloquea."
         actions={
           items.length > 0 && (
-            <a href={urlExportCsv(proyectoId)} className={btnDark}>Exportar CSV</a>
+            <button
+              className={btnDark}
+              onClick={() =>
+                descargarConAuth(
+                  `/proyectos/${proyectoId}/visualizacion/export.csv`,
+                  `ranking-${proyectoId}.csv`,
+                ).catch((e) => setError(e.message))
+              }
+            >
+              Exportar CSV
+            </button>
           )
         }
       />

@@ -290,3 +290,21 @@ class RankingSnapshot(Base):
     )
     creado_en = Column(DateTime(timezone=True), server_default=func.now())
     datos = Column(JSONB)
+
+
+class Usuario(Base):
+    """Cuenta de acceso a la app (login).
+
+    Auth simple para la fase de experimentacion: correo + contrasena (hash bcrypt)
+    y un rol de texto. Los proyectos son compartidos, asi que el usuario no es
+    "dueno" de nada todavia; solo controla el acceso a la herramienta.
+    """
+
+    __tablename__ = "usuario"
+
+    id = _pk()
+    email = Column(Text, nullable=False, unique=True)
+    nombre = Column(Text, nullable=False)
+    password_hash = Column(Text, nullable=False)
+    rol = Column(Text, nullable=False, server_default=text("'participante'"))
+    creado_en = Column(DateTime(timezone=True), server_default=func.now())

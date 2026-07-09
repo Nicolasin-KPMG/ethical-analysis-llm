@@ -16,6 +16,13 @@ class Settings(BaseSettings):
     # --- Base de datos ---
     database_url: str = "postgresql://postgres:postgres@db:5432/tesis"
 
+    # --- Autenticacion (login con JWT) ---
+    # Secreto para firmar los tokens. CAMBIAR en cualquier despliegue real; el
+    # valor por defecto es solo para desarrollo local.
+    jwt_secret: str = "dev-secret-cambiar-en-produccion"
+    jwt_algorithm: str = "HS256"
+    access_token_expire_minutes: int = 60 * 12  # 12 horas
+
     # --- Proveedor de LLM ---
     llm_provider: str = "anthropic"  # "anthropic" | "openai" | "local"
     anthropic_api_key: str = ""

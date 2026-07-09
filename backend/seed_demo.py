@@ -13,16 +13,34 @@ Usa solo la libreria estandar (urllib) para no requerir dependencias extra.
 
 import json
 import os
+import urllib.error
 import urllib.request
 
 API = os.environ.get("API_URL", "http://localhost:8001")
+
+# La API ahora exige login. El seed crea (o reutiliza) un usuario demo y guarda
+# su token aqui para adjuntarlo en cada peticion.
+DEMO_USER = {
+    "nombre": "Demo Seed",
+    # Dominio real: email-validator rechaza TLD reservados como .local/.test.
+    "email": os.environ.get("SEED_EMAIL", "demo@example.com"),
+    "password": os.environ.get("SEED_PASSWORD", "demo1234"),
+}
+_TOKEN = None
+
+
+def _headers():
+    h = {"Content-Type": "application/json"}
+    if _TOKEN:
+        h["Authorization"] = f"Bearer {_TOKEN}"
+    return h
 
 
 def _post(path, payload):
     req = urllib.request.Request(
         f"{API}{path}",
         data=json.dumps(payload).encode(),
-        headers={"Content-Type": "application/json"},
+        headers=_headers(),
         method="POST",
     )
     with urllib.request.urlopen(req) as r:
@@ -33,7 +51,7 @@ def _put(path, payload):
     req = urllib.request.Request(
         f"{API}{path}",
         data=json.dumps(payload).encode(),
-        headers={"Content-Type": "application/json"},
+        headers=_headers(),
         method="PUT",
     )
     with urllib.request.urlopen(req) as r:
@@ -41,8 +59,25 @@ def _put(path, payload):
 
 
 def _get(path):
-    with urllib.request.urlopen(f"{API}{path}") as r:
+    req = urllib.request.Request(f"{API}{path}", headers=_headers())
+    with urllib.request.urlopen(req) as r:
         return json.load(r)
+
+
+def _autenticar():
+    """Registra el usuario demo (o inicia sesion si ya existe) y guarda el token."""
+    global _TOKEN
+    try:
+        data = _post("/auth/register", DEMO_USER)
+    except urllib.error.HTTPError as exc:
+        if exc.code != 409:  # 409 = ya existe: se hace login normal
+            raise
+        data = _post(
+            "/auth/login",
+            {"email": DEMO_USER["email"], "password": DEMO_USER["password"]},
+        )
+    _TOKEN = data["access_token"]
+    print(f"Autenticado como {DEMO_USER['email']}.")
 
 
 # --- Definicion de los datos de prueba ---
@@ -107,6 +142,7 @@ def fuerza_para(i, j):
 
 def main():
     print(f"Conectando a {API} ...")
+    _autenticar()
     proyecto = _post("/proyectos", PROYECTO)
     pid = proyecto["id"]
     print(f"Proyecto creado: {pid}")

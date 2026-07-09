@@ -8,7 +8,7 @@ import {
   listarTrazabilidad,
   editarRelacion,
   eliminarRelacion,
-  urlExportProyecto,
+  descargarConAuth,
 } from "../../lib/api";
 import { useProyecto } from "../../components/ProyectoContext";
 import {
@@ -67,9 +67,17 @@ export default function Page() {
         title="Derivados y trazabilidad"
         subtitle="Relaciones origen → derivado. Regla de arrastre: un derivado obligatorio no debería quedar por debajo del requisito que mitiga."
         actions={
-          <a href={urlExportProyecto(proyectoId)} className={btnDark}>
+          <button
+            className={btnDark}
+            onClick={() =>
+              descargarConAuth(
+                `/proyectos/${proyectoId}/export.json`,
+                `proyecto-${proyectoId}.json`,
+              ).catch((e) => setError(e.message))
+            }
+          >
             Exportar proyecto (JSON)
-          </a>
+          </button>
         }
       />
 

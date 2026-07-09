@@ -15,6 +15,7 @@ from models.models import (
     EvaluacionDimension,
     RankingSnapshot,
     ChunkNormativo,
+    Usuario,
 )
 
 __all__ = [
@@ -32,4 +33,5 @@ __all__ = [
     "EvaluacionDimension",
     "RankingSnapshot",
     "ChunkNormativo",
+    "Usuario",
 ]

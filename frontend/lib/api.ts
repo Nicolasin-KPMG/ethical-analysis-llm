@@ -3,6 +3,39 @@
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
+// --- Sesion / token ---
+// El token JWT se guarda en localStorage y se adjunta como Authorization en cada
+// llamada. Es simple y suficiente para la app; el AuthContext gestiona el ciclo.
+const TOKEN_KEY = "authToken";
+
+export function getToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(TOKEN_KEY);
+}
+
+export function setToken(token: string | null) {
+  if (typeof window === "undefined") return;
+  if (token) localStorage.setItem(TOKEN_KEY, token);
+  else localStorage.removeItem(TOKEN_KEY);
+}
+
+// Se dispara cuando el backend responde 401 (token ausente/expirado), para que
+// el AuthContext cierre la sesion y lleve al login.
+export type UnauthorizedHandler = () => void;
+let onUnauthorized: UnauthorizedHandler | null = null;
+export function setUnauthorizedHandler(fn: UnauthorizedHandler | null) {
+  onUnauthorized = fn;
+}
+
+function authHeaders(extra?: HeadersInit): HeadersInit {
+  const token = getToken();
+  return {
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...extra,
+  };
+}
+
 // --- Tipos que reflejan los esquemas del backend (Fase 1) ---
 
 export type Proyecto = {
@@ -107,15 +140,36 @@ export type VisualizacionOut = {
 // Helper generico: hace fetch y lanza un error legible si la respuesta falla.
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, {
-    headers: { "Content-Type": "application/json" },
     cache: "no-store",
     ...options,
+    headers: authHeaders(options?.headers),
   });
+  if (res.status === 401 && onUnauthorized) onUnauthorized();
   if (!res.ok) {
     const detalle = await res.text();
     throw new Error(`Error ${res.status}: ${detalle}`);
   }
   return res.json() as Promise<T>;
+}
+
+// Descarga autenticada: como los <a href> no llevan el header Authorization,
+// bajamos el archivo con fetch y lo entregamos al navegador como blob.
+export async function descargarConAuth(path: string, nombreArchivo: string) {
+  const res = await fetch(`${API_URL}${path}`, {
+    cache: "no-store",
+    headers: authHeaders(),
+  });
+  if (res.status === 401 && onUnauthorized) onUnauthorized();
+  if (!res.ok) throw new Error(`Error ${res.status}: ${await res.text()}`);
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = nombreArchivo;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 }
 
 // --- Proyectos ---
@@ -166,11 +220,13 @@ export const editarDimension = (
   });
 
 export const eliminarDimension = (dimensionId: string) =>
-  fetch(`${API_URL}/dimensiones/${dimensionId}`, { method: "DELETE" }).then(
-    (res) => {
-      if (!res.ok) throw new Error(`Error ${res.status}`);
-    },
-  );
+  fetch(`${API_URL}/dimensiones/${dimensionId}`, {
+    method: "DELETE",
+    headers: authHeaders(),
+  }).then((res) => {
+    if (res.status === 401 && onUnauthorized) onUnauthorized();
+    if (!res.ok) throw new Error(`Error ${res.status}`);
+  });
 
 // --- Evaluaciones (Fase 5) ---
 
@@ -304,7 +360,9 @@ export const obtenerAnalisis = async (
 ): Promise<Analisis | null> => {
   const res = await fetch(`${API_URL}/requisitos/${requisitoId}/analisis`, {
     cache: "no-store",
+    headers: authHeaders(),
   });
+  if (res.status === 401 && onUnauthorized) onUnauthorized();
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(`Error ${res.status}: ${await res.text()}`);
   return res.json();
@@ -377,7 +435,11 @@ export const editarRelacion = (
   });
 
 export const eliminarRelacion = (relacionId: string) =>
-  fetch(`${API_URL}/relaciones/${relacionId}`, { method: "DELETE" }).then((res) => {
+  fetch(`${API_URL}/relaciones/${relacionId}`, {
+    method: "DELETE",
+    headers: authHeaders(),
+  }).then((res) => {
+    if (res.status === 401 && onUnauthorized) onUnauthorized();
     if (!res.ok) throw new Error(`Error ${res.status}`);
   });
 
@@ -391,3 +453,49 @@ export type BanderaReq = { requisito_id: string; bandera: BanderaEtica };
 
 export const listarBanderas = (proyectoId: string) =>
   request<BanderaReq[]>(`/proyectos/${proyectoId}/banderas`);
+
+// --- Autenticación (login) ---
+
+export type Usuario = {
+  id: string;
+  email: string;
+  nombre: string;
+  rol: string;
+  creado_en?: string | null;
+};
+
+export type TokenResponse = {
+  access_token: string;
+  token_type: string;
+  usuario: Usuario;
+};
+
+// El registro/login no llevan token; usan fetch directo para dar un error legible.
+async function requestPublic<T>(path: string, body: unknown): Promise<T> {
+  const res = await fetch(`${API_URL}${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    let detalle = await res.text();
+    try {
+      detalle = JSON.parse(detalle).detail ?? detalle;
+    } catch {
+      /* deja el texto tal cual */
+    }
+    throw new Error(detalle || `Error ${res.status}`);
+  }
+  return res.json() as Promise<T>;
+}
+
+export const registrar = (data: {
+  nombre: string;
+  email: string;
+  password: string;
+}) => requestPublic<TokenResponse>("/auth/register", data);
+
+export const login = (data: { email: string; password: string }) =>
+  requestPublic<TokenResponse>("/auth/login", data);
+
+export const obtenerPerfil = () => request<Usuario>("/auth/me");

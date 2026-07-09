@@ -5,8 +5,17 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAuth } from "./AuthContext";
 
 type Item = { href: string; paso: string; label: string };
+
+// Iniciales del usuario para el avatar (máx. 2 letras).
+function iniciales(nombre: string): string {
+  const partes = nombre.trim().split(/\s+/).filter(Boolean);
+  if (partes.length === 0) return "?";
+  if (partes.length === 1) return partes[0].slice(0, 2).toUpperCase();
+  return (partes[0][0] + partes[partes.length - 1][0]).toUpperCase();
+}
 
 const PASOS: Item[] = [
   { href: "/", paso: "•", label: "Dashboard" },
@@ -21,6 +30,7 @@ const PASOS: Item[] = [
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const { usuario, logout } = useAuth();
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
 
@@ -96,16 +106,39 @@ export default function Sidebar() {
         </ul>
       </nav>
 
-      {/* Perfil */}
+      {/* Perfil + cerrar sesión */}
       <div className="mt-auto border-t border-white/5 px-4 py-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-accent-600 text-sm font-semibold text-white">
-            NP
+          <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-accent-600 text-sm font-semibold text-white">
+            {usuario ? iniciales(usuario.nombre) : "?"}
           </div>
-          <div className="min-w-0">
-            <div className="truncate text-sm font-medium text-white">Nicolás Pérez</div>
-            <div className="truncate text-xs text-slate-500">Tesis · Gestión ética</div>
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-sm font-medium text-white">
+              {usuario?.nombre ?? "Invitado"}
+            </div>
+            <div className="truncate text-xs text-slate-500">{usuario?.email ?? ""}</div>
           </div>
+          <button
+            onClick={logout}
+            title="Cerrar sesión"
+            aria-label="Cerrar sesión"
+            className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-ink-800 hover:text-white"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-4 w-4"
+            >
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+          </button>
         </div>
       </div>
     </aside>

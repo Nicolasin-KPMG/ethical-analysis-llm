@@ -11,3 +11,6 @@ python-dotenv==1.0.1
 anthropic==0.42.0            # SDK del LLM por defecto (Claude)
 openai==1.59.2               # cliente compatible para LLM/embeddings locales (Ollama / vLLM)
 httpx==0.28.1
+PyJWT==2.10.1                # firma/verificacion de los tokens de sesion (login)
+bcrypt==4.2.1                # hashing de contrasenas (login)
+email-validator==2.2.0       # validacion de EmailStr en los esquemas de auth
