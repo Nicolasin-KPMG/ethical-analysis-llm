@@ -11,9 +11,12 @@ Los proveedores (LLM y embeddings) se pueden inyectar para poder probar todo el
 flujo con dobles deterministas, sin gastar API.
 """
 
+import logging
 import uuid
 
 from sqlalchemy import func as sa_func
+
+logger = logging.getLogger(__name__)
 
 from models import (
     Requisito,
@@ -132,7 +135,12 @@ def _recuperar_fragmentos(db, req, consultas, embed_provider, k, max_total):
     - Por cada chunk repetido conserva la menor distancia (mas parecido).
     - Devuelve como mucho `max_total` fragmentos, ordenados de mas a menos
       relevante. Esto acota el contexto enviado al LLM (y el gasto de tokens).
-    - Es tolerante a fallos: si no hay embeddings o el RAG esta vacio, devuelve [].
+    - Es tolerante a fallos: si el endpoint de embeddings no responde o el RAG
+      esta vacio, degrada a "sin citas" pero NO oculta el motivo: lo registra en
+      el log y lo devuelve como segundo valor para dejar constancia en el analisis.
+
+    Devuelve una tupla (fragmentos, error): `error` es None si todo fue bien o un
+    texto corto con el motivo del fallo de recuperacion.
     """
     # Pequeño "bono" de relevancia para disposiciones vinculantes: las acerca en
     # el ranking frente a los considerandos, sin descartar estos del todo.
@@ -144,9 +152,16 @@ def _recuperar_fragmentos(db, req, consultas, embed_provider, k, max_total):
             resultados = recuperar(
                 db, consulta, proyecto_id=req.proyecto_id, k=k, provider=embed_provider
             )
-        except Exception:
-            # Embeddings no configurados / endpoint caido: seguimos sin citas.
-            return []
+        except Exception as exc:
+            # Endpoint de embeddings caido/inalcanzable, etc. Antes esto se
+            # tragaba en silencio y parecia "sin corpus"; ahora se hace visible.
+            motivo = f"{type(exc).__name__}: {exc}"
+            logger.warning(
+                "RAG: fallo al recuperar normativa para requisito %s: %s",
+                req.id,
+                motivo,
+            )
+            return [], motivo
         for chunk, dist in resultados:
             vinculante = _es_vinculante(chunk.referencia)
             score = dist - (BONO_VINCULANTE if vinculante else 0.0)
@@ -163,7 +178,7 @@ def _recuperar_fragmentos(db, req, consultas, embed_provider, k, max_total):
                 )
     # Ordena por score (vinculantes priorizados) y corta al tope.
     ordenados = sorted(mejores.values(), key=lambda x: x[0])[:max_total]
-    return [frag for _score, frag in ordenados]
+    return [frag for _score, frag in ordenados], None
 
 
 def _sincronizar_dimensiones_eticas(db, req, propuestas):
@@ -228,7 +243,9 @@ def analizar_requisito(db, requisito_id, llm_provider=None, embed_provider=None,
     pass1 = PrimeraPasada(**llm.analyze(_prompt_pass1(req), PrimeraPasada.model_json_schema()))
 
     # 2) Recuperacion RAG (acotada por k y por el tope total de fragmentos).
-    fragmentos = _recuperar_fragmentos(db, req, pass1.consultas_rag, embed, k, max_fragmentos)
+    fragmentos, rag_error = _recuperar_fragmentos(
+        db, req, pass1.consultas_rag, embed, k, max_fragmentos
+    )
 
     # 3) Segunda pasada (las tres capas).
     pass2 = AnalisisLLM(**llm.analyze(_prompt_pass2(req, fragmentos), AnalisisLLM.model_json_schema()))
@@ -238,7 +255,17 @@ def analizar_requisito(db, requisito_id, llm_provider=None, embed_provider=None,
     limitaciones = pass2.limitaciones
     nivel = "alta"
     if not fragmentos:
-        nota = "Sin recuperacion normativa (RAG vacio o sin embeddings): citas no verificadas."
+        if rag_error:
+            # El corpus puede estar bien; el problema fue alcanzar el RAG/embeddings.
+            nota = (
+                "No se pudo recuperar normativa (proveedor de embeddings o RAG no "
+                f"accesible: {rag_error}). Las citas no pudieron verificarse."
+            )
+        else:
+            nota = (
+                "Sin recuperacion normativa (no hay fragmentos para las normas "
+                "activas de este proyecto): citas no verificadas."
+            )
         limitaciones = f"{limitaciones}\n{nota}".strip() if limitaciones else nota
 
     # --- Persistencia ---
