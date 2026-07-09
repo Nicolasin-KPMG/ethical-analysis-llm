@@ -25,6 +25,7 @@ import {
 } from "../../lib/api";
 import { useProyecto } from "../../components/ProyectoContext";
 import { useToast } from "../../components/Toast";
+import { Markdown } from "../../components/Markdown";
 import ProgresoAnalisis from "../../components/ProgresoAnalisis";
 import {
   Card,
@@ -654,7 +655,7 @@ export default function Page() {
                                     : "border border-slate-200 bg-white text-slate-700")
                                 }
                               >
-                                {m.content}
+                                {m.role === "assistant" ? <Markdown text={m.content} /> : m.content}
                               </div>
                             </div>
                           ))
