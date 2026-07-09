@@ -97,18 +97,40 @@ DIMENSIONES = [
     {"nombre": "Riesgo de privacidad", "tipo": "riesgo_etico", "peso": 4},
 ]
 
-# 10 requisitos realistas para el dominio.
+# 10 requisitos realistas para el dominio (codigo, nombre, tipo, descripcion).
+# Unos estan redactados para tensionar la etica (001, 002, 003, 007) y otros son
+# mas benignos (004, 005, 009) o incluso protectores (010).
 REQUISITOS = [
-    ("REQ-001", "Filtrado automático de CVs", "funcional"),
-    ("REQ-002", "Ranking de candidatos por afinidad", "funcional"),
-    ("REQ-003", "Análisis de video-entrevistas", "funcional"),
-    ("REQ-004", "Chatbot de atención a postulantes", "funcional"),
-    ("REQ-005", "Detección de postulaciones duplicadas", "funcional"),
-    ("REQ-006", "Sugerencia de banda salarial", "funcional"),
-    ("REQ-007", "Verificación de antecedentes", "restriccion"),
-    ("REQ-008", "Panel de métricas de diversidad", "no_funcional"),
-    ("REQ-009", "Exportación de reportes a RR.HH.", "no_funcional"),
-    ("REQ-010", "Anonimización de datos sensibles", "restriccion"),
+    ("REQ-001", "Filtrado automático de CVs", "funcional",
+     "El sistema descarta automáticamente los CV que no alcanzan un puntaje mínimo "
+     "calculado por IA, sin que un reclutador revise esos descartes."),
+    ("REQ-002", "Ranking de candidatos por afinidad", "funcional",
+     "Ordena a los postulantes según una puntuación de afinidad al cargo estimada a "
+     "partir de su CV y su historial laboral."),
+    ("REQ-003", "Análisis de video-entrevistas", "funcional",
+     "Analiza las expresiones faciales, el tono de voz y el lenguaje corporal en "
+     "video-entrevistas para asignar un puntaje de idoneidad al candidato."),
+    ("REQ-004", "Chatbot de atención a postulantes", "funcional",
+     "Chatbot que responde dudas frecuentes de los postulantes sobre el estado y los "
+     "requisitos de su postulación."),
+    ("REQ-005", "Detección de postulaciones duplicadas", "funcional",
+     "Detecta y agrupa postulaciones duplicadas de una misma persona para evitar "
+     "registros repetidos en el proceso."),
+    ("REQ-006", "Sugerencia de banda salarial", "funcional",
+     "Sugiere una banda salarial para cada candidato a partir de sus expectativas, su "
+     "experiencia y datos de mercado."),
+    ("REQ-007", "Verificación de antecedentes", "restriccion",
+     "Cruza los datos del postulante con registros externos para verificar "
+     "antecedentes penales, comerciales y laborales."),
+    ("REQ-008", "Panel de métricas de diversidad", "no_funcional",
+     "Muestra a RR.HH. métricas agregadas de diversidad (género, edad, procedencia) "
+     "de los postulantes y de las personas contratadas."),
+    ("REQ-009", "Exportación de reportes a RR.HH.", "no_funcional",
+     "Exporta reportes del proceso de selección en PDF y Excel para el equipo de "
+     "Recursos Humanos."),
+    ("REQ-010", "Anonimización de datos sensibles", "restriccion",
+     "Anonimiza nombre, RUT y datos de contacto durante las etapas de evaluación para "
+     "reducir sesgos y proteger la privacidad."),
 ]
 
 
@@ -156,10 +178,16 @@ def main():
 
     # Requisitos.
     reqs = []
-    for codigo, nombre, tipo in REQUISITOS:
+    for codigo, nombre, tipo, descripcion in REQUISITOS:
         creado = _post(
             f"/proyectos/{pid}/requisitos",
-            {"codigo": codigo, "nombre": nombre, "tipo": tipo, "stakeholder": "RR.HH."},
+            {
+                "codigo": codigo,
+                "nombre": nombre,
+                "tipo": tipo,
+                "descripcion": descripcion,
+                "stakeholder": "RR.HH.",
+            },
         )
         reqs.append(creado)
     print(f"{len(reqs)} requisitos creados.")
