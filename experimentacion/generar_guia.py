@@ -143,17 +143,18 @@ E.append(Paragraph(
 E.append(PageBreak())
 
 # ---------- Contexto del proyecto ----------
-E.append(Paragraph("3 · El caso: “AsisteBeca”", styles["H2"]))
+E.append(Paragraph("3 · El caso: “Asegurox”", styles["H2"]))
 E.append(Paragraph("Contexto", styles["H3"]))
 E.append(P(
-    "La <b>Fundación Educación+</b> (organización ficticia, Chile) entrega cada año cerca de <b>500 becas</b> "
-    "de educación superior a estudiantes de escasos recursos. Recibe <b>miles de postulaciones</b> y hoy las "
-    "revisa a mano, lo que es lento y poco trazable. La fundación encargó a un equipo de software una "
-    "plataforma con IA, <b>“AsisteBeca”</b>, para <b>recibir postulaciones, priorizarlas y apoyar la "
-    "asignación</b> de las becas, además de hacer seguimiento de los becados."))
+    "<b>“Asegurox”</b> (compañía de seguros ficticia, Chile) arrastra un desorden serio en la gestión de "
+    "accesos. La última auditoría dejó varias problemáticas al descubierto: certificaciones de acceso que "
+    "nunca se hacían y empleados que acumulan permisos incompatibles. Una misma persona puede crear un "
+    "proveedor y, además, aprobar sus pagos; y hay cuentas activas de gente que ya no trabaja en la empresa."))
 E.append(P(
-    "El equipo de producto <b>ya redactó los requisitos</b> que aparecen abajo. La tarea de esta sesión es "
-    "someterlos al método: analizarlos éticamente con la herramienta, decidir su tratamiento y priorizarlos."))
+    "Para ordenar esto, Asegurox encargó una <b>plataforma con IA</b> que certifique los accesos y controle "
+    "la <b>segregación de funciones</b>. El equipo de producto <b>ya redactó los requisitos</b> que aparecen "
+    "abajo; la tarea de la sesión es someterlos al método: analizarlos éticamente con la herramienta, decidir "
+    "su tratamiento y priorizarlos."))
 
 E.append(Paragraph("Requisitos a cargar", styles["H3"]))
 E.append(Paragraph(
@@ -162,30 +163,51 @@ E.append(Paragraph(
 E.append(Spacer(1, 4))
 
 reqs = [
-    ("RF-01", "Portal de estado de la postulación",
-     "El estudiante consulta en tiempo real en qué etapa va su postulación (recibida, en revisión, resuelta).",
+    ("RF-01", "Catálogo de accesos por usuario",
+     "Cada jefatura ve en un panel todos los roles y accesos que tiene su equipo, con la fecha de la última certificación.",
      "Funcional"),
-    ("RF-02", "Recordatorios de fechas límite",
-     "Notificaciones y correos automáticos avisando plazos de postulación y de entrega de documentos.",
+    ("RF-02", "Campaña de certificación trimestral",
+     "Cada trimestre el sistema abre una campaña en la que la jefatura revisa y confirma o revoca los accesos de su equipo.",
      "Funcional"),
-    ("RF-03", "Ranking por mérito académico",
-     "Ordena a los postulantes según su promedio de notas certificadas por la institución de origen.",
+    ("RF-03", "Matriz de segregación de funciones",
+     "Se define un catálogo de funciones incompatibles (por ejemplo, crear un proveedor y aprobar sus pagos) y el sistema marca a quienes acumulan combinaciones prohibidas.",
      "Funcional"),
-    ("RF-04", "Asignación automática y final de la beca",
-     "El sistema decide de forma automática y definitiva quién recibe la beca según un puntaje de IA, "
-     "sin revisión de un evaluador humano.", "Funcional"),
-    ("RF-05", "Variables de priorización del modelo",
-     "Para “estimar el potencial” del postulante, el modelo pondera su comuna de residencia, el colegio "
-     "de origen, los apellidos y el género.", "Funcional"),
-    ("RF-06", "Predicción de riesgo de deserción",
-     "Cruza datos de salud, historial médico y actividad en redes sociales del postulante para estimar su "
-     "probabilidad de abandonar los estudios.", "Funcional"),
-    ("RF-07", "Resultado sin explicación",
-     "Al postulante se le muestra únicamente “aprobado” o “rechazado”, sin el puntaje obtenido ni los "
-     "motivos de la decisión.", "Restricción"),
-    ("RF-08", "Compartir base con patrocinadores",
-     "La base de postulantes (incluidos los rechazados) se entrega a empresas patrocinadoras para que "
-     "envíen ofertas comerciales.", "Funcional"),
+    ("RF-04", "Solicitud y aprobación de accesos",
+     "Un empleado solicita un acceso; su jefatura y el dueño del sistema lo aprueban y queda registrado quién pidió, quién aprobó y cuándo.",
+     "Funcional"),
+    ("RF-05", "Roles por puesto (plantillas de acceso)",
+     "Se definen plantillas de acceso estándar por cargo: al asignar un puesto se otorgan los accesos típicos, reduciendo errores de asignación manual.",
+     "Funcional"),
+    ("RF-06", "Índice de riesgo del empleado",
+     "El sistema calcula un nivel de riesgo por persona combinando cargo, antigüedad, área y cantidad de accesos, solo para sugerir a quién auditar primero. La decisión de auditar la toma siempre un responsable humano y no dispara ninguna acción automática sobre la persona.",
+     "Funcional"),
+    ("RF-07", "Monitoreo continuo de actividad",
+     "Para detectar accesos anómalos, el sistema registra de forma permanente los horarios de conexión, la ubicación y las aplicaciones que usa cada empleado.",
+     "Funcional"),
+    ("RF-08", "Revocación sin explicación",
+     "Cuando se le quita un acceso, al empleado se le avisa solo que “fue removido”, sin indicar el motivo ni a quién puede reclamar.",
+     "Restricción"),
+    ("RF-09", "Accesos temporales con caducidad",
+     "Los accesos de excepción se otorgan con una fecha de expiración automática y se avisa al solicitante antes de que caduquen.",
+     "Funcional"),
+    ("RF-10", "Recordatorios de certificación pendiente",
+     "El sistema notifica a cada jefatura las tareas de certificación por vencer, para que ninguna campaña quede sin cerrar.",
+     "Funcional"),
+    ("RF-11", "Tablero de cumplimiento",
+     "Un panel muestra indicadores agregados: porcentaje de accesos certificados, conflictos de segregación abiertos y cuentas sin dueño.",
+     "Funcional"),
+    ("RF-12", "Registro de auditoría inmutable",
+     "Todos los cambios de acceso (alta, baja, aprobación, revocación) quedan en un registro que no se puede alterar, para trazabilidad ante auditores.",
+     "No funcional"),
+    ("RF-13", "Integración con el directorio corporativo",
+     "El alta y la baja de accesos se sincroniza con el directorio corporativo usando solo el estado laboral (activo/inactivo) de la persona.",
+     "Funcional"),
+    ("RF-14", "Compartir el scoring con la aseguradora del grupo",
+     "Los niveles de riesgo por empleado se comparten con la compañía de seguros del grupo para “afinar” las pólizas de fidelidad y de personas.",
+     "Funcional"),
+    ("RF-15", "Exportación de evidencia para auditoría externa",
+     "El sistema genera un paquete de reportes de accesos y certificaciones para entregar a los auditores externos cuando lo soliciten.",
+     "Funcional"),
 ]
 data = [[P("Cód.", "TblH"), P("Requisito", "TblH"), P("Descripción", "TblH"), P("Tipo", "TblH")]]
 for c, n, d, t in reqs:
@@ -219,10 +241,10 @@ agenda = [
      "El facilitador presenta el objetivo, el método de 8 fases y cómo se usa la app. Se aclara que los "
      "participantes <b>no definen</b> requisitos: los reciben ya escritos."),
     ("08–13", "Lectura del caso",
-     "El grupo lee el contexto de “AsisteBeca” y los 8 requisitos."),
+     "El grupo lee el contexto de “Asegurox” y los 15 requisitos."),
     ("13–20", "Fase 1 · Registro",
-     "Crear el proyecto y cargar los 8 requisitos. Sugerencia: repartir la carga entre los participantes "
-     "(2 requisitos por persona)."),
+     "Crear el proyecto y cargar los 15 requisitos. Sugerencia: repartir la carga entre los participantes "
+     "(3–4 requisitos por persona) o partir de un proyecto ya cargado."),
     ("20–38", "Fases 2–3 · Análisis ético con IA",
      "Ejecutar el análisis por requisito y revisar las <b>tres capas</b>. Validar o editar la Capa 1, mirar "
      "las <b>citas normativas</b> y, en al menos <b>1–2 requisitos</b>, elegir un tratamiento "
@@ -330,29 +352,32 @@ E.append(ListFlowable(
 
 E.append(Paragraph("Riesgos esperados por requisito", styles["H3"]))
 E.append(Paragraph(
-    "RF-01, RF-02 y RF-03 son mayormente benignos (línea base de baja tensión). El resto está construido "
-    "para gatillar dimensiones concretas de riesgo ético:", styles["Small"]))
+    "De los 15 requisitos, <b>11 son mecánica operativa de control de accesos</b> (catálogos, aprobaciones, "
+    "certificación, tableros, logs, RBAC, integraciones): deberían pasar el cribado <b>sin</b> riesgo ético. "
+    "Solo <b>4</b> están construidos para gatillar tensiones concretas, uno por cada decisión de tratamiento:",
+    styles["Small"]))
 E.append(Spacer(1, 3))
 
 mapa = [
-    ("RF-01", "Bajo", "Transparencia (positiva). Refuerza el derecho a información del postulante.", "—"),
-    ("RF-02", "Bajo", "Beneficio operativo, sin datos sensibles ni decisión automatizada.", "—"),
-    ("RF-03", "Bajo/medio", "Mérito legítimo, pero atención a acceso desigual a certificación de notas.", "Equidad (leve)"),
-    ("RF-04", "Alto", "Decisión totalmente automatizada sin supervisión humana; falta de recurso/apelación.",
-     "AI Act (alto riesgo, educación); GDPR art. 22"),
-    ("RF-05", "Alto", "Variables proxy (comuna, colegio, apellido, género) → discriminación indirecta.",
-     "Ley 20.609; equidad y no discriminación"),
-    ("RF-06", "Alto", "Datos de salud y redes sociales; desproporción y vigilancia; categorías especiales.",
-     "Ley 19.628; GDPR datos sensibles; NIST"),
-    ("RF-07", "Alto", "Sin explicación del resultado → opacidad; no se puede impugnar la decisión.",
-     "Transparencia y explicabilidad; GDPR"),
-    ("RF-08", "Alto", "Uso para un fin distinto al declarado; sin consentimiento; incluye rechazados.",
-     "Ley 19.628; GDPR (limitación de finalidad, minimización)"),
+    ("RF-06", "Perfilado / scoring de personas",
+     "Puntúa a cada empleado. Riesgo residual bajo: solo prioriza a quién auditar y decide un humano.",
+     "ACEPTAR", "AI Act (evaluación de personas); NIST"),
+    ("RF-07", "Vigilancia / privacidad",
+     "Monitoreo permanente de ubicación y apps: intrusivo, pero con un fin legítimo de seguridad.",
+     "MITIGAR", "Ley 19.628; GDPR (minimización, proporcionalidad)"),
+    ("RF-08", "Opacidad / debido proceso",
+     "Revoca accesos sin motivo ni canal de reclamo: la persona no puede entender ni impugnar.",
+     "REFORMULAR", "Transparencia y explicabilidad; GDPR"),
+    ("RF-14", "Uso secundario / cesión a terceros",
+     "Comparte el scoring con la aseguradora para las pólizas: fin distinto y riesgo de discriminación.",
+     "ELIMINAR", "Ley 19.628; GDPR (limitación de finalidad)"),
 ]
-md = [[P("Cód.", "TblH"), P("Riesgo", "TblH"), P("Dimensión que debería emerger", "TblH"), P("Normas típicas", "TblH")]]
-for c, r, dim, nor in mapa:
-    md.append([P("<b>%s</b>" % c, "TblCb"), P(r, "TblC"), P(dim, "TblC"), P(nor, "TblC")])
-mt = Table(md, colWidths=[15*mm, 20*mm, 82*mm, 53*mm], repeatRows=1)
+md = [[P("Cód.", "TblH"), P("Tensión ética", "TblH"), P("Por qué", "TblH"),
+       P("Decisión esperada", "TblH"), P("Normas típicas", "TblH")]]
+for c, dim, pq, dec, nor in mapa:
+    md.append([P("<b>%s</b>" % c, "TblCb"), P(dim, "TblC"), P(pq, "TblC"),
+               P("<b>%s</b>" % dec, "TblCb"), P(nor, "TblC")])
+mt = Table(md, colWidths=[13*mm, 31*mm, 55*mm, 30*mm, 41*mm], repeatRows=1)
 msty = [
     ("BACKGROUND", (0,0), (-1,0), INK),
     ("VALIGN", (0,0), (-1,-1), "TOP"),
@@ -368,9 +393,10 @@ mt.setStyle(TableStyle(msty))
 E.append(mt)
 E.append(Spacer(1, 5))
 E.append(Paragraph(
-    "Éxito de la sesión: que los participantes, apoyados en la app, marquen RF-04 a RF-08 como riesgosos, "
-    "reconozcan al menos una cita normativa pertinente por caso, y usen las reformulaciones/derivados para "
-    "proponer una versión mejorada de 1–2 requisitos. Anota también los tropiezos de usabilidad.",
+    "Éxito de la sesión: que los participantes, apoyados en la app, identifiquen los 4 requisitos con "
+    "tensión ética (RF-06, RF-07, RF-08 y RF-14) entre los 11 operativos, reconozcan al menos una cita "
+    "normativa pertinente por caso, y ejerciten las cuatro decisiones (aceptar RF-06, mitigar RF-07 con "
+    "derivados, reformular RF-08, eliminar RF-14). Anota también los tropiezos de usabilidad.",
     styles["Note"]))
 
 doc.build(E)
