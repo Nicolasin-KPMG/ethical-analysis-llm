@@ -33,19 +33,13 @@ La app expone **3001** (frontend) y **8001** (backend). En el droplet:
 ufw allow 22 && ufw allow 3001 && ufw allow 8001 && ufw --force enable
 ```
 
-## 3. Subir el código y el corpus
-El repo **no incluye** los documentos normativos (`backend/datos/*.txt` están en
-`.gitignore`), así que se copian aparte.
-
-Desde **tu máquina** (sustituye `IP` por la del droplet):
+## 3. Subir el código
+El corpus normativo (`backend/datos/*.txt`) **ya viene en el repo**, así que basta
+clonar. Desde el droplet (o por ssh):
 ```bash
-# a) el código
-ssh root@IP 'git clone <URL_DE_TU_REPO> tesis && cd tesis && git checkout dev'
-
-# b) el corpus normativo (los .txt que faltan)
-scp backend/datos/*.txt root@IP:~/tesis/backend/datos/
+git clone <URL_DE_TU_REPO> tesis && cd tesis && git checkout dev
 ```
-> Si tu repo es privado y no tienes deploy key, alternativa simple:
+> Si tu repo es privado y no tienes deploy key, alternativa simple desde tu máquina:
 > `rsync -av --exclude node_modules --exclude .next --exclude .git ./ root@IP:~/tesis/`
 
 ## 4. Configurar el `.env` del servidor

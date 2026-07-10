@@ -18,8 +18,6 @@ pgdata/
 # Documento de contexto (work in progress, se versiona aparte por ahora)
 contexto_construccion_app.md
 
-# Corpus normativo (datos pesados / derivados): no se versiona.
-# Se conserva el ejemplo y el README de la carpeta.
+# Corpus normativo: los PDF (pesados) no se versionan; los .txt SÍ, porque son
+# los que ingesta el RAG y así el despliegue no necesita copiarlos aparte.
 backend/datos/*.pdf
-backend/datos/*.txt
-!backend/datos/ejemplo_norma.txt
