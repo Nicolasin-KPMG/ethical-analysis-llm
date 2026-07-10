@@ -65,7 +65,7 @@ docker compose ps                 # los 3 servicios en "Up"
 ```bash
 bash deploy/cargar_datos.sh
 ```
-Esto ingesta los 5 documentos al RAG (con Voyage) y crea el usuario/proyecto demo.
+Esto ingesta los 5 documentos al RAG (con OpenAI) y crea el usuario/proyecto demo.
 
 ## 7. Probar
 Abre **`http://IP:3001`** en el navegador y entra con:
@@ -73,6 +73,36 @@ Abre **`http://IP:3001`** en el navegador y entra con:
 - **Clave:** `demo1234`
 
 Pásale a tu jefe esa URL y esas credenciales.
+
+---
+
+## (Opcional) Dominio propio + HTTPS
+Para que la URL sea `https://tudominio.com` (con candado, sin `:3001`):
+
+1. **Compra un dominio** (Namecheap / Porkbun, ~1-10 USD el primer año).
+2. **Apunta el DNS a la IP del droplet.** En el panel del registrador crea:
+   - Registro **A**: `@`  → `IP_DEL_DROPLET`
+   - Registro **A**: `www` → `IP_DEL_DROPLET`  (o un CNAME `www` → `tudominio.com`)
+   Espera unos minutos a que propague (`ping tudominio.com` debe dar la IP).
+3. **Abre los puertos 80 y 443** en el droplet:
+   ```bash
+   ufw allow 80 && ufw allow 443
+   ```
+4. **Ajusta el `.env`**:
+   ```
+   DOMAIN=tudominio.com
+   NEXT_PUBLIC_API_URL=https://tudominio.com/api
+   ```
+5. **Levanta con el override de Caddy** (añade el reverse-proxy + HTTPS):
+   ```bash
+   docker compose -f docker-compose.yml -f deploy/docker-compose.caddy.yml up -d --build
+   ```
+   Caddy pide el certificado a Let's Encrypt solo (tarda ~30 s la primera vez).
+6. Abre **`https://tudominio.com`**. La URL para tu jefe pasa a ser esa.
+
+> El backend queda accesible bajo `https://tudominio.com/api`; el frontend lo usa
+> automáticamente por `NEXT_PUBLIC_API_URL`. Con esto se evita el "contenido
+> mixto" (una página https no puede llamar a un backend http).
 
 ---
 

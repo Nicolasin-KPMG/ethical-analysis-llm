@@ -1,0 +1,31 @@
+# Override para el despliegue con dominio + HTTPS.
+# Añade un reverse-proxy Caddy delante del frontend y el backend.
+#
+# Uso en el servidor (junto al compose base):
+#   docker compose -f docker-compose.yml -f deploy/docker-compose.caddy.yml up -d --build
+#
+# Requiere en el .env:
+#   DOMAIN=tudominio.com
+#   NEXT_PUBLIC_API_URL=https://tudominio.com/api
+# y los puertos 80 y 443 abiertos en el firewall.
+
+services:
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data      # certificados TLS (persisten entre reinicios)
+      - caddy_config:/config
+    depends_on:
+      - frontend
+      - backend
+
+volumes:
+  caddy_data:
+  caddy_config:

@@ -1,0 +1,21 @@
+# Reverse-proxy con HTTPS automático (Let's Encrypt) para la demo.
+# El dominio llega por la variable DOMAIN (definida en el .env).
+#
+#   https://TU_DOMINIO/         -> frontend Next.js
+#   https://TU_DOMINIO/api/...  -> backend FastAPI (se le quita el prefijo /api)
+#
+# Caddy pide y renueva el certificado TLS solo; solo necesita los puertos 80 y 443
+# abiertos y que el dominio apunte (A record) a la IP de este servidor.
+
+{$DOMAIN} {
+	# API del backend bajo /api. handle_path quita "/api" antes de reenviar,
+	# así el backend recibe /auth/login, /proyectos, etc. tal como espera.
+	handle_path /api/* {
+		reverse_proxy backend:8000
+	}
+
+	# Todo lo demás va al frontend.
+	handle {
+		reverse_proxy frontend:3000
+	}
+}
