@@ -90,7 +90,7 @@ REQUISITOS = [
     ("RF-02", "Campaña de certificación trimestral", "funcional",
      "Cada trimestre el sistema abre una campaña en la que la jefatura revisa y confirma o revoca los accesos de su equipo."),
     ("RF-03", "Matriz de segregación de funciones", "funcional",
-     "Se define un catálogo de funciones incompatibles (por ejemplo, crear un proveedor y aprobar sus pagos) y el sistema marca a quienes acumulan combinaciones prohibidas."),
+     "Se define un catálogo de funciones incompatibles (por ejemplo, crear un proveedor y aprobar sus pagos) y el sistema detecta y reporta las combinaciones de accesos prohibidas para que la jefatura las corrija."),
     ("RF-04", "Solicitud y aprobación de accesos", "funcional",
      "Un empleado solicita un acceso; su jefatura y el dueño del sistema lo aprueban y queda registrado quién pidió, quién aprobó y cuándo."),
     ("RF-05", "Roles por puesto (plantillas de acceso)", "funcional",
