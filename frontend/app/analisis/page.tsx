@@ -168,8 +168,10 @@ export default function Page() {
     setConfianza(a?.nivel_confianza ?? "media");
     setLimitaciones(a?.limitaciones ?? "");
     const c3 = a?.capas_2_3?.capa_3_deliberacion;
-    setNuevoNombre(c3?.reformulaciones_propuestas?.[0]?.texto_propuesto ?? "");
-    setNuevaDescripcion("");
+    // La reformulación propuesta por el LLM suele ser larga: va como DESCRIPCIÓN.
+    // El título se deja corto (el nombre actual del requisito), editable.
+    setNuevoNombre(a ? (requisitos.find((r) => r.id === a.requisito_id)?.nombre ?? "") : "");
+    setNuevaDescripcion(c3?.reformulaciones_propuestas?.[0]?.texto_propuesto ?? "");
     setDerivados((c3?.requisitos_derivados_propuestos ?? []).map((d) => ({ nombre: d.nombre, descripcion: d.descripcion ?? "" })));
     setDecision("aceptar");
     setJustificacion("");
@@ -720,8 +722,14 @@ export default function Page() {
 
                       {decision === "reformular" && (
                         <div className="mt-3 space-y-2">
-                          <input className="field" placeholder="Nuevo nombre del requisito" value={nuevoNombre} onChange={(e) => setNuevoNombre(e.target.value)} />
-                          <textarea className="field" rows={2} placeholder="Nueva descripción" value={nuevaDescripcion} onChange={(e) => setNuevaDescripcion(e.target.value)} />
+                          <div>
+                            <label className="text-xs font-medium text-slate-500">Título (corto)</label>
+                            <input className="field mt-1" placeholder="Nombre corto del requisito reformulado" value={nuevoNombre} onChange={(e) => setNuevoNombre(e.target.value)} />
+                          </div>
+                          <div>
+                            <label className="text-xs font-medium text-slate-500">Descripción (la reformulación completa)</label>
+                            <textarea className="field mt-1 resize-y" rows={5} placeholder="Texto completo de la reformulación" value={nuevaDescripcion} onChange={(e) => setNuevaDescripcion(e.target.value)} />
+                          </div>
                         </div>
                       )}
                       {decision === "mitigar" && (

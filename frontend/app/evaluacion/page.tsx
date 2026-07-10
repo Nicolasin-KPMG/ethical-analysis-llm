@@ -19,6 +19,15 @@ import { Card, PageHeader, EmptyState, Alert } from "../../components/ui";
 
 const celda = (rid: string, did: string) => `${rid}::${did}`;
 
+// Orden y estilo de los grupos de columnas por tipo de dimensión.
+const TIPO_META: Record<string, { label: string; orden: number; head: string }> = {
+  beneficio: { label: "Beneficio", orden: 0, head: "bg-emerald-50 text-emerald-700" },
+  costo: { label: "Costo", orden: 1, head: "bg-rose-50 text-rose-700" },
+  valor_etico: { label: "Valor ético", orden: 2, head: "bg-teal-50 text-teal-700" },
+  riesgo_etico: { label: "Riesgo ético", orden: 3, head: "bg-red-50 text-red-700" },
+};
+const tipoOrden = (t: string) => TIPO_META[t]?.orden ?? 99;
+
 // Escala cualitativa de la fuerza (0–5). El usuario elige con palabras.
 const ESCALA_FUERZA: { valor: number; label: string }[] = [
   { valor: 0, label: "No aplica" },
@@ -85,6 +94,19 @@ export default function Page() {
   if (!proyectoId)
     return <EmptyState>Selecciona o crea un proyecto arriba.</EmptyState>;
 
+  // Columnas ordenadas por tipo (beneficio, costo, valor ético, riesgo ético) y
+  // agrupadas en bloques consecutivos para el encabezado de grupo.
+  const dimsOrdenadas = [...dimensiones].sort(
+    (a, b) => tipoOrden(a.tipo) - tipoOrden(b.tipo) || a.nombre.localeCompare(b.nombre),
+  );
+  const grupos: { tipo: string; dims: Dimension[] }[] = [];
+  for (const d of dimsOrdenadas) {
+    const ult = grupos[grupos.length - 1];
+    if (ult && ult.tipo === d.tipo) ult.dims.push(d);
+    else grupos.push({ tipo: d.tipo, dims: [d] });
+  }
+  const inicioGrupo = new Set(grupos.map((g) => g.dims[0].id));
+
   return (
     <>
       <PageHeader
@@ -101,33 +123,57 @@ export default function Page() {
         </EmptyState>
       ) : (
         <Card className="overflow-hidden">
+          <p className="border-b border-slate-100 px-4 py-2 text-xs text-slate-400">
+            Las columnas están agrupadas por tipo. Desliza horizontalmente para ver todas; la columna de requisitos queda fija.
+          </p>
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="border-b border-slate-200 bg-slate-50/70 text-xs uppercase tracking-wide text-slate-500">
+            <table className="border-separate border-spacing-0 text-left text-sm">
+              <thead className="text-xs uppercase tracking-wide text-slate-500">
+                {/* Fila de grupos por tipo. */}
                 <tr>
-                  <th className="px-4 py-3 font-semibold">Requisito</th>
-                  {dimensiones.map((d) => (
-                    <th key={d.id} className="px-3 py-3 text-center font-semibold">
-                      <div className="text-slate-700">{d.nombre}</div>
-                      <div className="font-normal normal-case text-slate-400">{d.tipo.replace(/_/g, " ")}</div>
+                  <th
+                    rowSpan={2}
+                    className="sticky left-0 z-20 border-b border-slate-200 bg-slate-50 px-4 py-3 text-left font-semibold"
+                  >
+                    Requisito
+                  </th>
+                  {grupos.map((g) => (
+                    <th
+                      key={g.tipo}
+                      colSpan={g.dims.length}
+                      className={`border-b border-l border-slate-200 px-3 py-2 text-center font-semibold ${TIPO_META[g.tipo]?.head ?? "bg-slate-50 text-slate-600"}`}
+                    >
+                      {TIPO_META[g.tipo]?.label ?? g.tipo.replace(/_/g, " ")}
+                    </th>
+                  ))}
+                </tr>
+                {/* Fila de nombres de dimensión. */}
+                <tr>
+                  {dimsOrdenadas.map((d) => (
+                    <th
+                      key={d.id}
+                      className={`min-w-[8rem] border-b border-slate-200 bg-slate-50/70 px-3 py-3 text-center font-semibold normal-case text-slate-700 ${inicioGrupo.has(d.id) ? "border-l border-slate-200" : ""}`}
+                    >
+                      {d.nombre}
                     </th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody>
                 {requisitos.map((r) => (
-                  <tr key={r.id} className="hover:bg-slate-50/60">
-                    <td className="px-4 py-3">
+                  <tr key={r.id} className="group hover:bg-slate-50/60">
+                    <td className="sticky left-0 z-10 border-b border-slate-100 bg-white px-4 py-3 group-hover:bg-slate-50">
                       <div className="font-medium text-slate-800">{r.nombre}</div>
                       <div className="font-mono text-xs text-slate-400">{r.codigo}</div>
                     </td>
-                    {dimensiones.map((d) => {
+                    {dimsOrdenadas.map((d) => {
                       const key = celda(r.id, d.id);
+                      const bordeGrupo = inicioGrupo.has(d.id) ? "border-l border-slate-200" : "";
                       // La dimensión no aplica a este requisito: celda fija en "No aplica".
                       const noAplica = d.restringida && !(d.requisitos_aplica ?? []).includes(r.id);
                       if (noAplica) {
                         return (
-                          <td key={d.id} className="px-3 py-2 text-center">
+                          <td key={d.id} className={`border-b border-slate-100 px-3 py-2 text-center ${bordeGrupo}`}>
                             <span
                               title="Esta dimensión no aplica a este requisito"
                               className="inline-block rounded-md bg-slate-100 px-2 py-1 text-xs text-slate-400"
@@ -138,7 +184,7 @@ export default function Page() {
                         );
                       }
                       return (
-                        <td key={d.id} className="px-3 py-2 text-center">
+                        <td key={d.id} className={`border-b border-slate-100 px-3 py-2 text-center ${bordeGrupo}`}>
                           <select
                             className="field-sm w-28 text-center"
                             value={valores[key] ?? ""}

@@ -122,8 +122,8 @@ export default function Page() {
             <div className="sm:col-span-2">
               <label className={labelCls}>Descripción</label>
               <textarea
-                className="field mt-1"
-                rows={2}
+                className="field mt-1 resize-y"
+                rows={4}
                 value={form.descripcion}
                 onChange={(e) => setForm({ ...form, descripcion: e.target.value })}
               />
@@ -192,7 +192,14 @@ export default function Page() {
             return (
               <tr key={r.id} className="hover:bg-slate-50/60">
                 <td className={`${td} font-mono text-xs text-slate-500`}>{r.codigo || "—"}</td>
-                <td className={`${td} font-medium text-slate-800`}>{r.nombre}</td>
+                <td className={`${td} max-w-md`}>
+                  <div className="font-medium text-slate-800">{r.nombre}</div>
+                  {r.descripcion && (
+                    <div className="mt-0.5 whitespace-pre-wrap text-xs leading-relaxed text-slate-500">
+                      {r.descripcion}
+                    </div>
+                  )}
+                </td>
                 <td className={td}>
                   <Badge tone={tb.tone}>{tb.label}</Badge>
                 </td>
