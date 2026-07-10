@@ -29,7 +29,9 @@ import urllib.error
 import urllib.request
 
 API = os.environ.get("API_URL", "http://localhost:8001")
-TIMEOUT = 120  # el análisis (LLM + RAG) puede tardar
+# El análisis (LLM + RAG) puede tardar; al mitigar se auto-analizan varios
+# derivados en una sola llamada, así que damos margen (configurable).
+TIMEOUT = int(os.environ.get("SEED_TIMEOUT", "180"))
 
 DEMO_USER = {
     "nombre": "Demo Asegurox",
