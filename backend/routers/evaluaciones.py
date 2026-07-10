@@ -39,6 +39,13 @@ def guardar_evaluacion(
             status_code=400,
             detail="Solo se evaluan requisitos vigentes y no eliminados",
         )
+    # Los derivados de mitigacion no se evaluan: entran al ranking como bloque
+    # bajo su padre, no se puntuan por dimensiones.
+    if requisito.origen_requisito_id is not None:
+        raise HTTPException(
+            status_code=400,
+            detail="Los derivados de mitigacion no se evaluan (entran como bloque bajo su padre)",
+        )
 
     # La dimension debe existir y pertenecer al proyecto.
     dimension = db.get(Dimension, payload.dimension_id)

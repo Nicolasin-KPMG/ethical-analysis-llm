@@ -108,6 +108,12 @@ export type Evaluacion = {
   responsable?: string | null;
 };
 
+export type DerivadoRankingItem = {
+  requisito_id: string;
+  codigo?: string | null;
+  nombre: string;
+};
+
 export type RankingItem = {
   requisito_id: string;
   codigo?: string | null;
@@ -119,6 +125,8 @@ export type RankingItem = {
     costo: number;
     riesgo_etico: number;
   };
+  // Derivados de mitigación colgados de este requisito (bloque, no puntúan).
+  derivados?: DerivadoRankingItem[];
 };
 
 export type RankingOut = {

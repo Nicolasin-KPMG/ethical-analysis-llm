@@ -49,7 +49,13 @@ export default function Page() {
         listarDimensiones(proyectoId),
         listarEvaluaciones(proyectoId),
       ]);
-      setRequisitos(reqs.filter((r) => r.es_vigente !== false && r.estado !== "eliminado"));
+      // Los derivados de mitigación (origen_requisito_id) no se evalúan: entran
+      // al ranking como bloque bajo su padre.
+      setRequisitos(
+        reqs.filter(
+          (r) => r.es_vigente !== false && r.estado !== "eliminado" && !r.origen_requisito_id,
+        ),
+      );
       setDimensiones(dims);
       const mapa: Record<string, string> = {};
       evals.forEach((e: Evaluacion) => (mapa[celda(e.requisito_id, e.dimension_id)] = String(e.fuerza)));

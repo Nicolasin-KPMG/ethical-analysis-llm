@@ -15,12 +15,22 @@ class DesgloseRanking(BaseModel):
     riesgo_etico: int
 
 
+class DerivadoRankingItem(BaseModel):
+    """Control de mitigacion colgado de un requisito padre. No puntua."""
+
+    requisito_id: str
+    codigo: str | None = None
+    nombre: str
+
+
 class RankingItem(BaseModel):
     requisito_id: str
     codigo: str | None = None
     nombre: str
     puntaje_final: int
     desglose: DesgloseRanking
+    # Derivados de mitigacion que cuelgan de este requisito (bloque, no puntuan).
+    derivados: list[DerivadoRankingItem] = []
 
 
 class RankingOut(BaseModel):
