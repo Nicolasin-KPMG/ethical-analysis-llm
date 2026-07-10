@@ -33,8 +33,11 @@ class Settings(BaseSettings):
     local_llm_model: str = "llama3.1:8b"
 
     # --- Proveedor de embeddings (pieza aparte: Anthropic no genera embeddings) ---
-    embedding_provider: str = "hosted"  # "hosted" | "local"
+    embedding_provider: str = "hosted"  # "hosted" | "local" | "openai"
     embedding_model_hosted: str = "voyage-3"
+    # Modelo de OpenAI cuando embedding_provider == "openai" (reutiliza OPENAI_API_KEY).
+    # text-embedding-3-small acepta `dimensions` y se recorta a EMBEDDING_DIM (1024).
+    embedding_model_openai: str = "text-embedding-3-small"
     embedding_model_local: str = "intfloat/multilingual-e5-large"
     embedding_dim: int = 1024  # debe coincidir con el modelo elegido y con la columna VECTOR
     # Credencial del proveedor hospedado (Voyage por defecto).

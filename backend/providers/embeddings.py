@@ -101,8 +101,45 @@ class LocalEmbeddings(EmbeddingProvider):
         return [d.embedding for d in resp.data]
 
 
+class OpenAIEmbeddings(EmbeddingProvider):
+    """Embeddings con la API de OpenAI (misma credencial que el LLM).
+
+    Util para desplegar sin Ollama ni una cuenta aparte: reutiliza OPENAI_API_KEY.
+    Los modelos text-embedding-3-* aceptan el parametro `dimensions`, asi que se
+    recortan a EMBEDDING_DIM (1024) para casar con la columna VECTOR del esquema.
+    """
+
+    def __init__(self) -> None:
+        self._model = settings.embedding_model_openai
+        self._client = None  # perezoso
+
+    @property
+    def model_name(self) -> str:
+        return self._model
+
+    def _get_client(self):
+        if self._client is None:
+            from openai import OpenAI
+
+            if not settings.openai_api_key:
+                raise RuntimeError(
+                    "Falta OPENAI_API_KEY para usar embeddings de OpenAI."
+                )
+            self._client = OpenAI(api_key=settings.openai_api_key)
+        return self._client
+
+    def embed(self, texts: list[str]) -> list[list[float]]:
+        client = self._get_client()
+        resp = client.embeddings.create(
+            model=self._model, input=texts, dimensions=settings.embedding_dim
+        )
+        return [d.embedding for d in resp.data]
+
+
 def get_embedding_provider() -> EmbeddingProvider:
     """Devuelve la implementacion de embeddings segun EMBEDDING_PROVIDER."""
     if settings.embedding_provider == "local":
         return LocalEmbeddings()
+    if settings.embedding_provider == "openai":
+        return OpenAIEmbeddings()
     return HostedEmbeddings()

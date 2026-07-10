@@ -11,9 +11,8 @@ la **IP pública** del servidor.
 ---
 
 ## 0. Antes de empezar (en tu máquina)
-Ten a mano estas 3 claves (están en tu `.env` local):
+Ten a mano tu clave (la misma sirve para el LLM y para los embeddings):
 - `OPENAI_API_KEY`
-- `VOYAGE_API_KEY`
 - (opcional) `ANTHROPIC_API_KEY`
 
 ---
@@ -85,5 +84,5 @@ En DigitalOcean: **Destroy** el droplet. Con eso deja de facturar todo.
 - Salud del backend: `curl http://localhost:8001/health` en el droplet.
 - El frontend carga pero no trae datos → casi siempre `NEXT_PUBLIC_API_URL`
   mal puesto. Corrígelo en `.env` y `docker compose up -d --build frontend`.
-- Error de embeddings al ingestar → revisa `VOYAGE_API_KEY` y que
-  `EMBEDDING_PROVIDER=hosted` en el `.env`.
+- Error de embeddings al ingestar → revisa `OPENAI_API_KEY` y que
+  `EMBEDDING_PROVIDER=openai` en el `.env`.
