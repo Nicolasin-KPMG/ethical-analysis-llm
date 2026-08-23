@@ -10,7 +10,9 @@ services:
     name: tesis-backend
     runtime: docker
     plan: free
-    region: oregon
+    # Ohio = us-east-2, la misma region que la base en Neon. Si la base queda
+    # en otra region, cada consulta cruza el pais y el analisis hace varias.
+    region: ohio
     rootDir: backend
     dockerfilePath: ./Dockerfile
     healthCheckPath: /health

@@ -69,11 +69,16 @@ Si falla en **LLM por formato JSON**, prueba `gemini-2.5-pro` o baja
 
 ## Paso 1 — Base de datos en Neon
 
-1. Crea cuenta en <https://neon.tech> y un proyecto (region: US East).
-2. Copia la **connection string**. Debe terminar en `?sslmode=require`:
-   `postgresql://usuario:clave@ep-xxx.us-east-2.aws.neon.tech/neondb?sslmode=require`
-3. No hace falta crear tablas ni activar `pgvector` a mano: la migracion `0001`
-   hace `CREATE EXTENSION` y se aplica sola en el paso 4.
+Ya esta hecho: proyecto **TesisLLM** (`dark-term-41870672`), **Postgres 16**,
+region **us-east-2**, con las migraciones aplicadas. La cadena de conexion quedo
+guardada en el `.env` como `NEON_URL` (no pisa el `DATABASE_URL` local, que sigue
+apuntando al Postgres de Docker).
+
+Si necesitas recuperarla:
+
+```bash
+npx -y neonctl connection-string --project-id dark-term-41870672
+```
 
 ## Paso 2 — Backend en Render
 
@@ -81,7 +86,7 @@ Si falla en **LLM por formato JSON**, prueba `gemini-2.5-pro` o baja
 2. En <https://render.com>: **New -> Blueprint**, apunta al repo. Detecta el
    `render.yaml` de la raiz.
 3. Rellena las variables marcadas como secretas:
-   - `DATABASE_URL` -> la cadena de Neon del paso 1
+   - `DATABASE_URL` -> la `NEON_URL` de tu `.env`
    - `OPENAI_API_KEY` -> la API key de Gemini
    - `CORS_ORIGINS` -> dejalo en `*` por ahora; se ajusta en el paso 5
 4. Deploy. Tarda unos minutos. Anota la URL: `https://tesis-backend.onrender.com`.
@@ -104,13 +109,11 @@ Si falla en **LLM por formato JSON**, prueba `gemini-2.5-pro` o baja
 Una sola vez, desde tu maquina (los `.txt` normativos ya estan en el repo):
 
 ```bash
-NEON_URL='postgresql://...?sslmode=require' \
-GEMINI_KEY='TU_API_KEY' \
-API_URL='https://tesis-backend.onrender.com' \
-  bash deploy/cargar_datos_remoto.sh
+API_URL='https://tesis-backend.onrender.com' bash deploy/cargar_datos_remoto.sh
 ```
 
-Aplica migraciones, ingesta los 5 documentos y crea el usuario demo. La ingesta
+`NEON_URL` y `GEMINI_API_KEY` las lee del `.env`. Ingesta los 5 documentos y crea
+el usuario demo (las migraciones ya estan aplicadas, el paso es idempotente). La ingesta
 tarda varios minutos (844 fragmentos).
 
 ## Paso 5 — Cerrar CORS

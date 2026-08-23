@@ -8,20 +8,25 @@
 #       asi no hay que instalar Python ni las dependencias fuera de Docker.)
 #   2) Crea el usuario/proyecto demo llamando a la API publica de Render.
 #
-# Requiere estas variables de entorno:
-#   NEON_URL   cadena de conexion de Neon, terminada en ?sslmode=require
-#   GEMINI_KEY API key de Google AI Studio
-#   API_URL    URL publica del backend en Render (https://....onrender.com)
+# NEON_URL y GEMINI_KEY se leen del .env (donde ya estan guardadas).
+# API_URL hay que pasarla: es la URL publica del backend en Render.
 #
 # Uso:
-#   NEON_URL='postgresql://...' GEMINI_KEY='...' API_URL='https://...' \
-#     bash deploy/cargar_datos_remoto.sh
+#   API_URL='https://tesis-backend.onrender.com' bash deploy/cargar_datos_remoto.sh
 # ==========================================================================
 set -euo pipefail
 
-: "${NEON_URL:?Falta NEON_URL}"
-: "${GEMINI_KEY:?Falta GEMINI_KEY}"
-: "${API_URL:?Falta API_URL}"
+cd "$(dirname "$0")/.."
+
+# Lee una variable del .env sin arrastrar el resto del archivo.
+del_env () { grep -E "^$1=" .env 2>/dev/null | head -1 | cut -d= -f2- | tr -d '"'"'"' \r'; }
+
+NEON_URL="${NEON_URL:-$(del_env NEON_URL)}"
+GEMINI_KEY="${GEMINI_KEY:-$(del_env GEMINI_API_KEY)}"
+
+: "${NEON_URL:?Falta NEON_URL (ponla en el .env)}"
+: "${GEMINI_KEY:?Falta GEMINI_API_KEY en el .env}"
+: "${API_URL:?Falta API_URL (la URL del backend en Render)}"
 
 GEMINI_BASE="https://generativelanguage.googleapis.com/v1beta/openai/"
 
