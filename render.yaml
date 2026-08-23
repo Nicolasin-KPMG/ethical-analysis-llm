@@ -51,6 +51,8 @@ services:
         value: gemini-embedding-001
       - key: EMBEDDING_DIM
         value: "1024"        # debe coincidir con la columna VECTOR(1024)
+      - key: EMBEDDING_RPM
+        value: "85"          # tier gratis de Gemini: 100 embeddings/minuto
 
       # --- RAG ---
       - key: RAG_K_POR_CONSULTA

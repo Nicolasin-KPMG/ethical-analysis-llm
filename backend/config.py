@@ -45,6 +45,10 @@ class Settings(BaseSettings):
     # Endpoint compatible con OpenAI para embeddings (mismo motivo que arriba).
     # Independiente del LLM: se puede mezclar un LLM y otros embeddings.
     embedding_openai_base_url: str = ""
+    # Tope de textos embebidos por minuto. 0 = sin limite. El tier gratis de
+    # Gemini permite 100 req/min y su capa compatible cuenta un request por
+    # texto, asi que con 844 fragmentos hay que ir a ritmo o revienta con 429.
+    embedding_rpm: int = 0
     embedding_model_local: str = "intfloat/multilingual-e5-large"
     embedding_dim: int = 1024  # debe coincidir con el modelo elegido y con la columna VECTOR
     # Credencial del proveedor hospedado (Voyage por defecto).

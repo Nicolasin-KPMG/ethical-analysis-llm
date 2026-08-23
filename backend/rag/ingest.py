@@ -26,7 +26,7 @@ import re
 import uuid
 
 from database import SessionLocal
-from models import DocumentoNormativo
+from models import ChunkNormativo, DocumentoNormativo
 from providers.embeddings import get_embedding_provider
 from rag.store import guardar_chunk
 
@@ -226,17 +226,38 @@ def _cli():
         else:
             if not args.nombre:
                 parser.error("Indica --documento-id o --nombre para crear el documento.")
-            doc = DocumentoNormativo(
-                nombre=args.nombre,
-                jurisdiccion=args.jurisdiccion,
-                version=args.version,
-                fuente_url=args.fuente_url,
+            # Reutiliza el documento si ya existe con ese nombre, para que
+            # re-ingerir (o retomar una ingesta cortada) no deje duplicados.
+            doc = (
+                db.query(DocumentoNormativo)
+                .filter(DocumentoNormativo.nombre == args.nombre)
+                .first()
             )
-            db.add(doc)
-            db.commit()
-            db.refresh(doc)
+            if doc is None:
+                doc = DocumentoNormativo(
+                    nombre=args.nombre,
+                    jurisdiccion=args.jurisdiccion,
+                    version=args.version,
+                    fuente_url=args.fuente_url,
+                )
+                db.add(doc)
+                db.commit()
+                db.refresh(doc)
+                print(f"Documento creado: {doc.id}")
+            else:
+                print(f"Documento existente, se reingesta: {doc.id}")
             documento_id = doc.id
-            print(f"Documento creado: {documento_id}")
+
+        # Los fragmentos se reemplazan: si no, una segunda corrida duplicaria
+        # todo el corpus y el RAG devolveria la misma cita varias veces.
+        borrados = (
+            db.query(ChunkNormativo)
+            .filter(ChunkNormativo.documento_id == documento_id)
+            .delete(synchronize_session=False)
+        )
+        if borrados:
+            db.commit()
+            print(f"  {borrados} fragmentos previos borrados.")
 
         n = ingerir(db, documento_id, texto, tema=args.tema)
         print(f"{n} fragmentos ingeridos para el documento {documento_id}.")

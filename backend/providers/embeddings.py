@@ -15,11 +15,29 @@ Los clientes se crean de forma perezosa (solo al primer embed) para no exigir
 credenciales ni un endpoint vivo mientras no se use el RAG.
 """
 
+import time
 from abc import ABC, abstractmethod
+from collections import deque
 
 import httpx
 
 from config import settings
+
+
+def _segundos_sugeridos(exc) -> float | None:
+    """Saca el `retryDelay` que devuelve el proveedor en el error 429, si viene."""
+    try:
+        detalles = exc.response.json()["error"].get("details", [])
+    except Exception:
+        return None
+    for d in detalles:
+        valor = d.get("retryDelay")
+        if isinstance(valor, str) and valor.endswith("s"):
+            try:
+                return float(valor[:-1]) + 1
+            except ValueError:
+                return None
+    return None
 
 
 class EmbeddingProvider(ABC):
@@ -109,9 +127,13 @@ class OpenAIEmbeddings(EmbeddingProvider):
     recortan a EMBEDDING_DIM (1024) para casar con la columna VECTOR del esquema.
     """
 
+    MAX_REINTENTOS = 6
+
     def __init__(self) -> None:
         self._model = settings.embedding_model_openai
         self._client = None  # perezoso
+        # Marcas de tiempo de los textos ya enviados (ventana de 60 s).
+        self._historial: deque[float] = deque()
 
     @property
     def model_name(self) -> str:
@@ -135,12 +157,54 @@ class OpenAIEmbeddings(EmbeddingProvider):
             self._client = OpenAI(api_key=settings.openai_api_key, **extra)
         return self._client
 
+    def _esperar_turno(self, n: int) -> None:
+        """Frena antes de pedir, para no pasarse de EMBEDDING_RPM textos/minuto.
+
+        Ventana deslizante de 60 s: si los `n` textos nuevos no caben, duerme
+        hasta que el mas viejo salga de la ventana.
+        """
+        rpm = settings.embedding_rpm
+        if rpm <= 0:
+            return
+
+        def _purgar() -> None:
+            ahora = time.monotonic()
+            while self._historial and ahora - self._historial[0] > 60:
+                self._historial.popleft()
+
+        _purgar()
+        # Un lote mas grande que el cupo entero no cabe nunca: se espera a que
+        # la ventana quede vacia y se manda igual (el reintento cubre el resto).
+        while self._historial and len(self._historial) + n > rpm:
+            espera = 60 - (time.monotonic() - self._historial[0]) + 0.5
+            if espera > 0:
+                time.sleep(espera)
+            _purgar()
+
+        ahora = time.monotonic()
+        self._historial.extend([ahora] * n)
+
     def embed(self, texts: list[str]) -> list[list[float]]:
         client = self._get_client()
-        resp = client.embeddings.create(
-            model=self._model, input=texts, dimensions=settings.embedding_dim
-        )
-        return [d.embedding for d in resp.data]
+        from openai import RateLimitError
+
+        for intento in range(self.MAX_REINTENTOS):
+            self._esperar_turno(len(texts))
+            try:
+                resp = client.embeddings.create(
+                    model=self._model, input=texts, dimensions=settings.embedding_dim
+                )
+                return [d.embedding for d in resp.data]
+            except RateLimitError as exc:
+                if intento == self.MAX_REINTENTOS - 1:
+                    raise
+                # El proveedor suele decir cuanto esperar; si no, se va doblando.
+                espera = _segundos_sugeridos(exc) or 5 * (2**intento)
+                print(f"  [embeddings] 429: espero {espera:.0f}s y reintento...")
+                time.sleep(espera)
+                self._historial.clear()
+
+        raise RuntimeError("inalcanzable")
 
 
 def get_embedding_provider() -> EmbeddingProvider:

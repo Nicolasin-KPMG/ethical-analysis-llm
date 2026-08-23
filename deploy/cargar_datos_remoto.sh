@@ -39,6 +39,7 @@ en_backend () {
     -e EMBEDDING_OPENAI_BASE_URL="$GEMINI_BASE" \
     -e EMBEDDING_MODEL_OPENAI=gemini-embedding-001 \
     -e EMBEDDING_DIM=1024 \
+    -e EMBEDDING_RPM="${EMBEDDING_RPM:-85}" \
     backend "$@"
 }
 
@@ -53,7 +54,9 @@ ingest () {
     --jurisdiccion "$jur" --tema "$tema"
 }
 
-echo "==> 1/3  Ingestando el corpus normativo (embeddings con Gemini)..."
+# El tier gratis de Gemini topa en 100 embeddings/minuto, asi que la ingesta
+# va a ritmo (~85/min) y tarda unos 10 minutos para los 844 fragmentos.
+echo "==> 1/3  Ingestando el corpus normativo (embeddings con Gemini, ~10 min)..."
 # archivo                       nombre                                   jurisdiccion  tema
 ingest "AI_Act.txt"                 "EU AI Act"                          "UE"    "IA de alto riesgo"
 ingest "GDPR.txt"                   "GDPR"                               "UE"    "Proteccion de datos"
