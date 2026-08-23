@@ -220,6 +220,11 @@ def _cli():
     parser.add_argument("--version", help="Version del documento")
     parser.add_argument("--fuente-url", help="URL de la fuente")
     parser.add_argument("--tema", help="Tema para los metadatos de los fragmentos")
+    parser.add_argument(
+        "--forzar",
+        action="store_true",
+        help="Re-ingesta aunque el documento ya tenga fragmentos (los reemplaza).",
+    )
     args = parser.parse_args()
 
     with open(args.archivo, encoding="utf-8") as f:
@@ -254,16 +259,25 @@ def _cli():
                 print(f"Documento existente, se reingesta: {doc.id}")
             documento_id = doc.id
 
-        # Los fragmentos se reemplazan: si no, una segunda corrida duplicaria
-        # todo el corpus y el RAG devolveria la misma cita varias veces.
-        borrados = (
+        ya_tiene = (
             db.query(ChunkNormativo)
             .filter(ChunkNormativo.documento_id == documento_id)
-            .delete(synchronize_session=False)
+            .count()
         )
-        if borrados:
+        if ya_tiene and not args.forzar:
+            # Reanudar una carga cortada no debe re-embeber lo ya hecho: con un
+            # proveedor limitado por minuto eso son minutos y cuota tirados.
+            print(f"  ya tiene {ya_tiene} fragmentos; se omite (usa --forzar para rehacerlo).")
+            return
+
+        # Al forzar se reemplazan: si no, la corrida duplicaria el corpus y el
+        # RAG devolveria la misma cita varias veces.
+        if ya_tiene:
+            db.query(ChunkNormativo).filter(
+                ChunkNormativo.documento_id == documento_id
+            ).delete(synchronize_session=False)
             db.commit()
-            print(f"  {borrados} fragmentos previos borrados.")
+            print(f"  {ya_tiene} fragmentos previos borrados.")
 
         n = ingerir(db, documento_id, texto, tema=args.tema)
         print(f"{n} fragmentos ingeridos para el documento {documento_id}.")
