@@ -8,9 +8,10 @@ para el profesor. Alternativa a `DEPLOY.md` (DigitalOcean, ~12 USD/mes).
 | Frontend (Next.js) | **Vercel** | Hobby | gratis para este uso |
 | Backend (FastAPI) | **Render** | Free | duerme a los 15 min; 750 h/mes; 5 GB de trafico |
 | Base de datos | **Neon** | Free | 0.5 GB, pgvector incluido, no caduca |
-| LLM + embeddings | **Google AI Studio (Gemini)** | Free | 250 K tokens/min |
+| LLM | **Google AI Studio (Gemini)** | Free | 250 K tokens/min |
+| Embeddings | **OpenAI** `text-embedding-3-small` | de pago | ~1 centavo todo el corpus |
 
-Ninguna de las cuatro pide tarjeta de credito.
+Solo los embeddings cuestan dinero, y son centavos (ver abajo por que).
 
 ## Por que estos y no otros
 
@@ -21,6 +22,18 @@ Ninguna de las cuatro pide tarjeta de credito.
   limite libre es de ~12 K tokens/minuto en llama-3.3-70b. Un analisis de este
   metodo manda hasta 10 fragmentos normativos + el esquema de las tres capas +
   4096 tokens de salida, asi que se pasa del limite. Gemini da 250 K TPM.
+- **Embeddings en OpenAI y no en Gemini**: el tier gratis de Gemini permite
+  **1000 embeddings al dia** y el corpus son 844 fragmentos. Cabe una sola carga
+  y ninguna reindexacion; cualquier reintento agota la cuota del dia (lo
+  comprobamos en carne propia). `text-embedding-3-small` cuesta ~1 centavo por
+  todo el corpus, no tiene tope diario y acepta `dimensions=1024`.
+- **Cada pieza con su credencial**: el LLM usa `OPENAI_API_KEY` (con la clave de
+  Gemini) y los embeddings usan `EMBEDDING_OPENAI_API_KEY` (la de OpenAI). Son
+  proveedores distintos, asi que no pueden compartir variable.
+- **El corpus no se puede mezclar**: los vectores de dos modelos distintos no son
+  comparables y la busqueda **no filtra por modelo**, asi que un corpus a medias
+  devuelve citas malas sin dar error. Al cambiar de modelo hay que reindexar
+  todo con `FORZAR=1`.
 - **Se reutiliza el proveedor `openai`**: Gemini expone una capa compatible con
   la API de OpenAI, asi que basta apuntar `OPENAI_BASE_URL` a Google. No hace
   falta un proveedor nuevo en el codigo.
@@ -94,7 +107,8 @@ npx -y neonctl connection-string --project-id dark-term-41870672
    `render.yaml` de la raiz.
 3. Rellena las variables marcadas como secretas:
    - `DATABASE_URL` -> la `NEON_URL` de tu `.env`
-   - `OPENAI_API_KEY` -> la API key de Gemini
+   - `OPENAI_API_KEY` -> la API key de Gemini (para el LLM)
+   - `EMBEDDING_OPENAI_API_KEY` -> la API key de OpenAI (para los embeddings)
    - `CORS_ORIGINS` -> dejalo en `*` por ahora; se ajusta en el paso 5
 4. Deploy. Tarda unos minutos. Anota la URL: `https://tesis-backend.onrender.com`.
 5. Verifica: `curl https://tesis-backend.onrender.com/health` -> `"database": "ok"`.
@@ -119,7 +133,8 @@ Una sola vez, desde tu maquina (los `.txt` normativos ya estan en el repo):
 API_URL='https://tesis-backend.onrender.com' bash deploy/cargar_datos_remoto.sh
 ```
 
-`NEON_URL` y `GEMINI_API_KEY` las lee del `.env`. Ingesta los 5 documentos y crea
+`NEON_URL` y `OPENAI_API_KEY` las lee del `.env`. Para reindexar tras cambiar de
+modelo de embeddings, antepon `FORZAR=1`. Ingesta los 5 documentos y crea
 el usuario demo (las migraciones ya estan aplicadas, el paso es idempotente). La ingesta
 tarda varios minutos (844 fragmentos).
 

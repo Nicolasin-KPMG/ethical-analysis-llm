@@ -22,41 +22,44 @@ cd "$(dirname "$0")/.."
 del_env () { grep -E "^$1=" .env 2>/dev/null | head -1 | cut -d= -f2- | tr -d '"'"'"' \r'; }
 
 NEON_URL="${NEON_URL:-$(del_env NEON_URL)}"
-GEMINI_KEY="${GEMINI_KEY:-$(del_env GEMINI_API_KEY)}"
+# Embeddings por OpenAI y no por Gemini: el tier gratis de Gemini topa en 1000
+# embeddings AL DIA y el corpus son 844, asi que una sola reindexacion agota la
+# cuota. text-embedding-3-small cuesta ~1 centavo por todo el corpus y no tiene
+# tope diario. El LLM sigue siendo Gemini (gratis): son piezas independientes.
+OPENAI_KEY="${OPENAI_KEY:-$(del_env OPENAI_API_KEY)}"
 
 : "${NEON_URL:?Falta NEON_URL (ponla en el .env)}"
-: "${GEMINI_KEY:?Falta GEMINI_API_KEY en el .env}"
+: "${OPENAI_KEY:?Falta OPENAI_API_KEY en el .env (embeddings)}"
 : "${API_URL:?Falta API_URL (la URL del backend en Render)}"
-
-GEMINI_BASE="https://generativelanguage.googleapis.com/v1beta/openai/"
 
 # `run --rm --no-deps` usa la imagen del backend sin levantar el Postgres local.
 en_backend () {
   docker compose run --rm --no-deps \
     -e DATABASE_URL="$NEON_URL" \
-    -e OPENAI_API_KEY="$GEMINI_KEY" \
     -e EMBEDDING_PROVIDER=openai \
-    -e EMBEDDING_OPENAI_BASE_URL="$GEMINI_BASE" \
-    -e EMBEDDING_MODEL_OPENAI=gemini-embedding-001 \
+    -e EMBEDDING_OPENAI_API_KEY="$OPENAI_KEY" \
+    -e EMBEDDING_OPENAI_BASE_URL= \
+    -e EMBEDDING_MODEL_OPENAI=text-embedding-3-small \
     -e EMBEDDING_DIM=1024 \
-    -e EMBEDDING_RPM="${EMBEDDING_RPM:-85}" \
+    -e EMBEDDING_RPM="${EMBEDDING_RPM:-0}" \
     backend "$@"
 }
 
 echo "==> 0/3  Aplicando migraciones en Neon (crea el esquema y pgvector)..."
 en_backend alembic upgrade head
 
+# FORZAR=1 re-ingesta documentos ya cargados. Obligatorio al cambiar de modelo
+# de embeddings: los vectores de modelos distintos no son comparables y la
+# busqueda no filtra por modelo, asi que un corpus mezclado da citas malas.
 ingest () {
   local archivo="$1" nombre="$2" jur="$3" tema="$4"
   echo "==> Ingestando: $nombre"
   en_backend python -m rag.ingest \
     --archivo "/app/datos/$archivo" --nombre "$nombre" \
-    --jurisdiccion "$jur" --tema "$tema"
+    --jurisdiccion "$jur" --tema "$tema" ${FORZAR:+--forzar}
 }
 
-# El tier gratis de Gemini topa en 100 embeddings/minuto, asi que la ingesta
-# va a ritmo (~85/min) y tarda unos 10 minutos para los 844 fragmentos.
-echo "==> 1/3  Ingestando el corpus normativo (embeddings con Gemini, ~10 min)..."
+echo "==> 1/3  Ingestando el corpus normativo (embeddings con OpenAI)..."
 # archivo                       nombre                                   jurisdiccion  tema
 ingest "AI_Act.txt"                 "EU AI Act"                          "UE"    "IA de alto riesgo"
 ingest "GDPR.txt"                   "GDPR"                               "UE"    "Proteccion de datos"

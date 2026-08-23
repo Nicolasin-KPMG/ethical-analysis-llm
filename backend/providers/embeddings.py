@@ -143,9 +143,10 @@ class OpenAIEmbeddings(EmbeddingProvider):
         if self._client is None:
             from openai import OpenAI
 
-            if not settings.openai_api_key:
+            clave = settings.embedding_openai_api_key or settings.openai_api_key
+            if not clave:
                 raise RuntimeError(
-                    "Falta OPENAI_API_KEY para usar embeddings de OpenAI."
+                    "Falta EMBEDDING_OPENAI_API_KEY (u OPENAI_API_KEY) para los embeddings."
                 )
             # base_url vacio = API de OpenAI. Si esta puesto, sirve cualquier
             # proveedor compatible (p. ej. Gemini) sin cambiar codigo.
@@ -154,7 +155,7 @@ class OpenAIEmbeddings(EmbeddingProvider):
                 if settings.embedding_openai_base_url
                 else {}
             )
-            self._client = OpenAI(api_key=settings.openai_api_key, **extra)
+            self._client = OpenAI(api_key=clave, **extra)
         return self._client
 
     def _esperar_turno(self, n: int) -> None:

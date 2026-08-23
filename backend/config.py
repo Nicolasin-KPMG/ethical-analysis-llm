@@ -45,6 +45,11 @@ class Settings(BaseSettings):
     # Endpoint compatible con OpenAI para embeddings (mismo motivo que arriba).
     # Independiente del LLM: se puede mezclar un LLM y otros embeddings.
     embedding_openai_base_url: str = ""
+    # Credencial propia para los embeddings. Si queda vacia se usa
+    # OPENAI_API_KEY. Hace falta cuando el LLM y los embeddings son de
+    # proveedores distintos (p. ej. LLM en Gemini y embeddings en OpenAI),
+    # porque entonces cada uno necesita su propia clave.
+    embedding_openai_api_key: str = ""
     # Tope de textos embebidos por minuto. 0 = sin limite. El tier gratis de
     # Gemini permite 100 req/min y su capa compatible cuenta un request por
     # texto, asi que con 844 fragmentos hay que ir a ritmo o revienta con 429.

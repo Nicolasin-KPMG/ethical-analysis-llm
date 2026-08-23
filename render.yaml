@@ -42,17 +42,22 @@ services:
       - key: OPENAI_MODEL
         value: gemini-3.7-flash
 
-      # --- Embeddings: mismo proveedor y misma llave ---
+      # --- Embeddings: OpenAI, NO Gemini ---
+      # El tier gratis de Gemini topa en 1000 embeddings al dia y el corpus son
+      # 844: no alcanza para reindexar. text-embedding-3-small cuesta centavos
+      # y no tiene tope diario. Por eso lleva su propia credencial.
       - key: EMBEDDING_PROVIDER
         value: openai
+      - key: EMBEDDING_OPENAI_API_KEY
+        sync: false          # aqui va la API key de OpenAI (sk-proj-...)
       - key: EMBEDDING_OPENAI_BASE_URL
-        value: https://generativelanguage.googleapis.com/v1beta/openai/
+        value: ""            # vacio = API de OpenAI
       - key: EMBEDDING_MODEL_OPENAI
-        value: gemini-embedding-001
+        value: text-embedding-3-small
       - key: EMBEDDING_DIM
         value: "1024"        # debe coincidir con la columna VECTOR(1024)
       - key: EMBEDDING_RPM
-        value: "85"          # tier gratis de Gemini: 100 embeddings/minuto
+        value: "0"           # OpenAI no necesita freno
 
       # --- RAG ---
       - key: RAG_K_POR_CONSULTA
