@@ -1,0 +1,61 @@
+# Blueprint de Render para el backend (plan gratuito).
+# La base de datos NO va aqui: se usa Neon (el Postgres gratis de Render caduca
+# a los 30 dias y este necesita la extension pgvector).
+#
+# Uso: en Render -> New -> Blueprint -> apuntar a este repo.
+# Las variables marcadas `sync: false` se rellenan a mano en el panel (secretos).
+
+services:
+  - type: web
+    name: tesis-backend
+    runtime: docker
+    plan: free
+    region: oregon
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    envVars:
+      # --- Entorno ---
+      - key: APP_ENV
+        value: prod          # sin --reload; las instancias free son de 512 MB
+
+      # --- Base de datos (Neon) ---
+      # Pegar la cadena de Neon TERMINADA en ?sslmode=require
+      - key: DATABASE_URL
+        sync: false
+
+      # --- Sesiones ---
+      - key: JWT_SECRET
+        generateValue: true  # Render genera un secreto aleatorio
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "720"
+
+      # --- LLM: Gemini por su capa compatible con OpenAI ---
+      - key: LLM_PROVIDER
+        value: openai
+      - key: OPENAI_API_KEY
+        sync: false          # aqui va la API key de Google AI Studio
+      - key: OPENAI_BASE_URL
+        value: https://generativelanguage.googleapis.com/v1beta/openai/
+      - key: OPENAI_MODEL
+        value: gemini-2.5-flash
+
+      # --- Embeddings: mismo proveedor y misma llave ---
+      - key: EMBEDDING_PROVIDER
+        value: openai
+      - key: EMBEDDING_OPENAI_BASE_URL
+        value: https://generativelanguage.googleapis.com/v1beta/openai/
+      - key: EMBEDDING_MODEL_OPENAI
+        value: gemini-embedding-001
+      - key: EMBEDDING_DIM
+        value: "1024"        # debe coincidir con la columna VECTOR(1024)
+
+      # --- RAG ---
+      - key: RAG_K_POR_CONSULTA
+        value: "4"
+      - key: RAG_MAX_FRAGMENTOS
+        value: "10"
+
+      # --- CORS: dominio del frontend en Vercel ---
+      - key: CORS_ORIGINS
+        sync: false          # p. ej. https://tesis-nico.vercel.app

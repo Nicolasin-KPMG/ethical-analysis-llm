@@ -28,5 +28,15 @@ PY
 echo "Aplicando migraciones (alembic upgrade head)..."
 alembic upgrade head
 
-echo "Levantando uvicorn..."
-exec uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+# Puerto: en compose es 8000; los PaaS (Render, Koyeb...) inyectan $PORT.
+PUERTO="${PORT:-8000}"
+
+# Recarga automatica solo en desarrollo. En el despliegue APP_ENV=prod, donde
+# --reload sobra y consume memoria (las instancias gratis son de 512 MB).
+if [ "${APP_ENV:-dev}" = "prod" ]; then
+  echo "Levantando uvicorn (prod) en :$PUERTO ..."
+  exec uvicorn main:app --host 0.0.0.0 --port "$PUERTO"
+else
+  echo "Levantando uvicorn (dev, reload) en :$PUERTO ..."
+  exec uvicorn main:app --host 0.0.0.0 --port "$PUERTO" --reload
+fi

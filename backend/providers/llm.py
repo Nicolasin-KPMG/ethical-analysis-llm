@@ -95,7 +95,10 @@ class OpenAILLM(LLMProvider):
 
             if not self.api_key:
                 raise RuntimeError("Falta OPENAI_API_KEY para usar el LLM de OpenAI.")
-            self._client = OpenAI(api_key=self.api_key)
+            # base_url vacio = API de OpenAI. Si esta puesto, el mismo cliente
+            # habla con cualquier proveedor compatible (Gemini, Groq, vLLM...).
+            extra = {"base_url": settings.openai_base_url} if settings.openai_base_url else {}
+            self._client = OpenAI(api_key=self.api_key, **extra)
         return self._client
 
     def analyze(self, prompt: str, schema: dict) -> dict:

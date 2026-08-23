@@ -29,6 +29,10 @@ class Settings(BaseSettings):
     anthropic_model: str = "claude-sonnet-4-6"
     openai_api_key: str = ""
     openai_model: str = "gpt-4o-mini"
+    # Endpoint compatible con OpenAI. Vacio = la API de OpenAI. Se rellena para
+    # usar otro proveedor con el mismo cliente (p. ej. Gemini o Groq, que exponen
+    # una capa compatible): asi cambiar de LLM no toca codigo, solo el .env.
+    openai_base_url: str = ""
     local_llm_base_url: str = "http://localhost:11434/v1"
     local_llm_model: str = "llama3.1:8b"
 
@@ -38,6 +42,9 @@ class Settings(BaseSettings):
     # Modelo de OpenAI cuando embedding_provider == "openai" (reutiliza OPENAI_API_KEY).
     # text-embedding-3-small acepta `dimensions` y se recorta a EMBEDDING_DIM (1024).
     embedding_model_openai: str = "text-embedding-3-small"
+    # Endpoint compatible con OpenAI para embeddings (mismo motivo que arriba).
+    # Independiente del LLM: se puede mezclar un LLM y otros embeddings.
+    embedding_openai_base_url: str = ""
     embedding_model_local: str = "intfloat/multilingual-e5-large"
     embedding_dim: int = 1024  # debe coincidir con el modelo elegido y con la columna VECTOR
     # Credencial del proveedor hospedado (Voyage por defecto).
@@ -50,6 +57,10 @@ class Settings(BaseSettings):
     # por tanto, el gasto de tokens del LLM.
     rag_k_por_consulta: int = 4   # fragmentos a recuperar por cada consulta del LLM
     rag_max_fragmentos: int = 10  # tope total de fragmentos enviados al analisis
+
+    # --- Despliegue ---
+    # Origenes permitidos por CORS, separados por coma. "*" abre todo (local).
+    cors_origins: str = "*"
 
 
 # Instancia unica reutilizable en toda la app.

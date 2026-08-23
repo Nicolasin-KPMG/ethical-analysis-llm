@@ -125,7 +125,14 @@ class OpenAIEmbeddings(EmbeddingProvider):
                 raise RuntimeError(
                     "Falta OPENAI_API_KEY para usar embeddings de OpenAI."
                 )
-            self._client = OpenAI(api_key=settings.openai_api_key)
+            # base_url vacio = API de OpenAI. Si esta puesto, sirve cualquier
+            # proveedor compatible (p. ej. Gemini) sin cambiar codigo.
+            extra = (
+                {"base_url": settings.embedding_openai_base_url}
+                if settings.embedding_openai_base_url
+                else {}
+            )
+            self._client = OpenAI(api_key=settings.openai_api_key, **extra)
         return self._client
 
     def embed(self, texts: list[str]) -> list[list[float]]:

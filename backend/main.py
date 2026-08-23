@@ -33,11 +33,13 @@ app = FastAPI(
     version="0.1.0",
 )
 
-# CORS abierto en local para que el frontend (localhost:3000) hable con el backend.
-# No es endurecimiento de produccion (fuera de alcance, ver seccion 12).
+# CORS: en local queda abierto ("*"); en el despliegue se limita a los dominios
+# del frontend con CORS_ORIGINS (lista separada por comas).
+_origenes = [o.strip() for o in settings.cors_origins.split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_origenes or ["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
