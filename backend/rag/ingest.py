@@ -179,30 +179,36 @@ def ingerir(
     if not fragmentos:
         return 0
 
-    # Embebe en lotes para no mandar todo de una.
-    textos = [t for _, t in fragmentos]
-    embeddings = []
-    for i in range(0, len(textos), batch):
-        embeddings.extend(provider.embed(textos[i : i + batch]))
+    metadatos_base = {
+        "norma": documento.nombre,
+        "jurisdiccion": documento.jurisdiccion,
+        "tema": tema,
+    }
 
-    for (referencia, texto_frag), emb in zip(fragmentos, embeddings):
-        metadatos = {
-            "norma": documento.nombre,
-            "jurisdiccion": documento.jurisdiccion,
-            "tema": tema,
-        }
-        guardar_chunk(
-            db,
-            documento_id=documento_id,
-            referencia=referencia,
-            texto=texto_frag,
-            metadatos=metadatos,
-            embedding=emb,
-            modelo_embedding=provider.model_name,
-        )
+    # Se embebe y se guarda lote a lote, con commit en cada uno. No es solo por
+    # memoria: con un proveedor limitado por minuto, embeber los 844 fragmentos
+    # de una tarda varios minutos, y una sesion abierta sin tocar la base
+    # termina con "SSL connection has been closed unexpectedly" al hacer commit.
+    # Commitear por lote mantiene viva la conexion y deja avance guardado.
+    guardados = 0
+    for i in range(0, len(fragmentos), batch):
+        lote = fragmentos[i : i + batch]
+        vectores = provider.embed([t for _, t in lote])
+        for (referencia, texto_frag), emb in zip(lote, vectores):
+            guardar_chunk(
+                db,
+                documento_id=documento_id,
+                referencia=referencia,
+                texto=texto_frag,
+                metadatos=dict(metadatos_base),
+                embedding=emb,
+                modelo_embedding=provider.model_name,
+            )
+        db.commit()
+        guardados += len(lote)
+        print(f"  {guardados}/{len(fragmentos)} fragmentos", flush=True)
 
-    db.commit()
-    return len(fragmentos)
+    return guardados
 
 
 def _cli():
