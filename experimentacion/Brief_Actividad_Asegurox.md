@@ -1,8 +1,8 @@
 # Actividad de experimentación — App de gestión ética y priorización de requisitos
 
 ## Qué es
-Sesión guiada de **~60 min** con **3–4 participantes** que **usan una herramienta web**
-(no definen requisitos: los reciben ya redactados). La app sistematiza un método de
+Sesión guiada de **~60 min** con **4 participantes** que **usan una herramienta web**
+
 **8 fases** que, para cada requisito de un proyecto de software con IA, detecta
 implicancias éticas, propone cómo tratarlas y calcula un ranking que equilibra
 **valor vs. riesgo**. La tarea del grupo es **analizar, decidir el tratamiento y
@@ -19,8 +19,7 @@ operativos y unos pocos tienen tensión ética.
 - URL: **http://159.223.124.246:3001**
 - Usuario: **demo@example.com** · Clave: **demo1234**
 - Trabajen sobre el proyecto **"Asegurox — Certificación de accesos"** (limpio, para
-  la sesión). Existe también una copia **"(DEMO resuelta)"** solo como referencia de
-  cómo se ve terminado.
+  la sesión).
 
 ## Actividades a realizar (flujo completo, 8 fases)
 
@@ -28,7 +27,7 @@ operativos y unos pocos tienen tensión ética.
 El proyecto y los 15 requisitos ya están cargados; solo revisarlos.
 
 ### Fases 2–3 · Análisis ético con IA
-1. Correr el **cribado**: marca qué requisitos podrían tener riesgo ético (los demás
+1. Correr el **pre-análisis**: marca qué requisitos podrían tener riesgo ético (los demás
    quedan como operativos).
 2. Para cada requisito marcado, ejecutar el **análisis** y revisar las **3 capas**:
    - **Capa 1:** tema ético, actor afectado, tipo de daño y **norma tensionada con
@@ -43,7 +42,7 @@ El proyecto y los 15 requisitos ya están cargados; solo revisarlos.
    - *Eliminar* lo saca del ranking (queda como historial, no se borra).
 
 ### Fase 4 · Dimensiones
-Definir y **ponderar (peso 1–5)** las dimensiones de priorización: **beneficio** y
+Definir y **ponderar (peso 1–5)** en base a cuan importante es aquella dimensión. las dimensiones de priorización: **beneficio** y
 **valor ético** (suman), **costo** y **riesgo ético** (restan). Las de **riesgo
 ético** las propone la IA en el análisis; las de beneficio/costo las define el equipo.
 

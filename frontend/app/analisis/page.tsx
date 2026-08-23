@@ -276,7 +276,7 @@ export default function Page() {
         subtitle="El LLM identifica, analiza y propone; tú editas y decides. El re-análisis es manual."
         actions={
           <button onClick={onCribar} disabled={cribando || requisitos.length === 0} className={btnDark}>
-            {cribando ? "Cribando…" : "Ejecutar pre-análisis"}
+            {cribando ? "Analizando..." : "Ejecutar pre-análisis"}
           </button>
         }
       />
