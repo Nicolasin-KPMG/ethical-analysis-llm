@@ -199,10 +199,14 @@ class OpenAIEmbeddings(EmbeddingProvider):
                 if intento == self.MAX_REINTENTOS - 1:
                     raise
                 # El proveedor suele decir cuanto esperar; si no, se va doblando.
-                espera = _segundos_sugeridos(exc) or 5 * (2**intento)
-                print(f"  [embeddings] 429: espero {espera:.0f}s y reintento...")
+                # Minimo de 20 s: el proveedor a veces sugiere ~0 s y reintentar
+                # de inmediato solo quema mas cuota.
+                espera = max(_segundos_sugeridos(exc) or 5 * (2**intento), 20)
+                print(f"  [embeddings] 429: espero {espera:.0f}s y reintento...", flush=True)
                 time.sleep(espera)
-                self._historial.clear()
+                # OJO: no se limpia el historial. El intento fallido igual conto
+                # contra la cuota del proveedor, asi que olvidarlo hacia que el
+                # siguiente saliera de golpe y volviera a chocar.
 
         raise RuntimeError("inalcanzable")
 

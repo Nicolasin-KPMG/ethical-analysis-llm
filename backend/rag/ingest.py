@@ -163,7 +163,7 @@ def ingerir(
     texto,
     tema=None,
     provider=None,
-    batch=64,
+    batch=32,
 ):
     """Limpia, chunquea, embebe y guarda los fragmentos de un documento.
 
