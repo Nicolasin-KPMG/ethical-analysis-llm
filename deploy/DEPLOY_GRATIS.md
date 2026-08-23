@@ -43,24 +43,20 @@ Ninguna de las cuatro pide tarjeta de credito.
 ## Paso 0 — Validar Gemini antes de desplegar
 
 Esto ahorra depurar en produccion. Saca la API key en
-<https://aistudio.google.com/apikey> y prueba en local:
+<https://aistudio.google.com/apikey>, pegala en el `.env` en la linea
+`GEMINI_API_KEY=` y corre:
 
 ```bash
-docker compose run --rm --no-deps \
-  -e LLM_PROVIDER=openai \
-  -e OPENAI_API_KEY='TU_API_KEY' \
-  -e OPENAI_BASE_URL='https://generativelanguage.googleapis.com/v1beta/openai/' \
-  -e OPENAI_MODEL=gemini-2.5-flash \
-  -e EMBEDDING_PROVIDER=openai \
-  -e EMBEDDING_OPENAI_BASE_URL='https://generativelanguage.googleapis.com/v1beta/openai/' \
-  -e EMBEDDING_MODEL_OPENAI=gemini-embedding-001 \
-  -e EMBEDDING_DIM=1024 \
-  backend python probar_proveedor.py
+bash deploy/probar_gemini.sh
 ```
 
 Debe imprimir `TODO OK`. Comprueba las dos cosas que suelen romperse al cambiar
 de proveedor: que respeta `response_format=json_object` y que devuelve vectores
 de exactamente 1024 dimensiones.
+
+El script no toca tu configuracion local: pasa las variables solo a un contenedor
+de un solo uso, asi que tu `.env` sigue apuntando a OpenAI/gpt-4.1 para el
+desarrollo del dia a dia.
 
 Si falla en **embeddings por dimensiones**, el proveedor ignoro `dimensions`.
 Alternativas: usar `text-embedding-3-small` de OpenAI (cuesta ~1 centavo por todo
