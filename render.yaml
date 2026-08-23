@@ -40,7 +40,7 @@ services:
       - key: OPENAI_BASE_URL
         value: https://generativelanguage.googleapis.com/v1beta/openai/
       - key: OPENAI_MODEL
-        value: gemini-2.5-flash
+        value: gemini-3.7-flash
 
       # --- Embeddings: mismo proveedor y misma llave ---
       - key: EMBEDDING_PROVIDER

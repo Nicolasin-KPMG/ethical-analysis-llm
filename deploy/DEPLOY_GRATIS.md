@@ -62,8 +62,15 @@ Si falla en **embeddings por dimensiones**, el proveedor ignoro `dimensions`.
 Alternativas: usar `text-embedding-3-small` de OpenAI (cuesta ~1 centavo por todo
 el corpus), o migrar la columna a las dimensiones que devuelva y re-ingerir.
 
-Si falla en **LLM por formato JSON**, prueba `gemini-2.5-pro` o baja
-`RAG_MAX_FRAGMENTOS`.
+Si falla en **LLM**, prueba otro modelo sin tocar el `.env`:
+`MODELO=gemini-3.6-flash bash deploy/probar_gemini.sh`. Los modelos viejos se
+retiran para cuentas nuevas (`gemini-2.5-flash` ya no se sirve), y la lista viva
+se consulta con:
+
+```bash
+curl -s -H "Authorization: Bearer $GEMINI_API_KEY" \
+  https://generativelanguage.googleapis.com/v1beta/openai/models
+```
 
 ---
 

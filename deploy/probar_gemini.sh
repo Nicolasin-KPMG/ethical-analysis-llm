@@ -38,7 +38,7 @@ docker compose run --rm --no-deps \
   -e LLM_PROVIDER=openai \
   -e OPENAI_API_KEY="$GEMINI_API_KEY" \
   -e OPENAI_BASE_URL="$BASE" \
-  -e OPENAI_MODEL=gemini-2.5-flash \
+  -e OPENAI_MODEL="${MODELO:-gemini-3.7-flash}" \
   -e EMBEDDING_PROVIDER=openai \
   -e EMBEDDING_OPENAI_BASE_URL="$BASE" \
   -e EMBEDDING_MODEL_OPENAI=gemini-embedding-001 \
