@@ -128,6 +128,7 @@ class OpenAIEmbeddings(EmbeddingProvider):
     """
 
     MAX_REINTENTOS = 6
+    URL_OPENAI = "https://api.openai.com/v1"
 
     def __init__(self) -> None:
         self._model = settings.embedding_model_openai
@@ -148,14 +149,14 @@ class OpenAIEmbeddings(EmbeddingProvider):
                 raise RuntimeError(
                     "Falta EMBEDDING_OPENAI_API_KEY (u OPENAI_API_KEY) para los embeddings."
                 )
-            # base_url vacio = API de OpenAI. Si esta puesto, sirve cualquier
-            # proveedor compatible (p. ej. Gemini) sin cambiar codigo.
-            extra = (
-                {"base_url": settings.embedding_openai_base_url}
-                if settings.embedding_openai_base_url
-                else {}
+            # Siempre explicito: si no se pasa base_url, el SDK toma la variable
+            # de entorno OPENAI_BASE_URL, que aqui apunta al LLM (Gemini) y hacia
+            # que los embeddings de OpenAI se mandaran a Google con la key
+            # equivocada. Vacio en la config = API oficial de OpenAI.
+            self._client = OpenAI(
+                api_key=clave,
+                base_url=settings.embedding_openai_base_url or self.URL_OPENAI,
             )
-            self._client = OpenAI(api_key=clave, **extra)
         return self._client
 
     def _esperar_turno(self, n: int) -> None:

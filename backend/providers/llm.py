@@ -11,9 +11,50 @@ Los clientes se crean de forma perezosa para no exigir credenciales hasta usarlo
 """
 
 import json
+import time
 from abc import ABC, abstractmethod
 
 from config import settings
+
+
+def _segundos_sugeridos(exc) -> float | None:
+    """Lee el `retryDelay` que el proveedor devuelve dentro del error 429."""
+    try:
+        cuerpo = exc.response.json()
+    except Exception:
+        return None
+    # Gemini devuelve una lista; OpenAI un objeto. Se normaliza.
+    if isinstance(cuerpo, list):
+        cuerpo = cuerpo[0] if cuerpo else {}
+    for d in cuerpo.get("error", {}).get("details", []) or []:
+        valor = d.get("retryDelay")
+        if isinstance(valor, str) and valor.endswith("s"):
+            try:
+                return float(valor[:-1]) + 1
+            except ValueError:
+                return None
+    return None
+
+
+def _con_reintento(llamada, intentos: int = 3):
+    """Ejecuta `llamada` reintentando ante 429.
+
+    Los tiers gratis limitan por minuto (Gemini free: 5 peticiones/min), y el
+    analisis gasta dos de golpe. Sin esto, encadenar dos requisitos devuelve un
+    500 al usuario en vez de tardar unos segundos mas.
+    """
+    from openai import RateLimitError
+
+    for intento in range(intentos):
+        try:
+            return llamada()
+        except RateLimitError as exc:
+            if intento == intentos - 1:
+                raise
+            espera = min(_segundos_sugeridos(exc) or 10 * (intento + 1), 30)
+            print(f"  [llm] 429: espero {espera:.0f}s y reintento...", flush=True)
+            time.sleep(espera)
+    raise RuntimeError("inalcanzable")
 
 
 class LLMProvider(ABC):
@@ -95,10 +136,13 @@ class OpenAILLM(LLMProvider):
 
             if not self.api_key:
                 raise RuntimeError("Falta OPENAI_API_KEY para usar el LLM de OpenAI.")
-            # base_url vacio = API de OpenAI. Si esta puesto, el mismo cliente
-            # habla con cualquier proveedor compatible (Gemini, Groq, vLLM...).
-            extra = {"base_url": settings.openai_base_url} if settings.openai_base_url else {}
-            self._client = OpenAI(api_key=self.api_key, **extra)
+            # Explicito a proposito: sin base_url el SDK lee OPENAI_BASE_URL del
+            # entorno, y basta que otra pieza la use para acabar hablando con el
+            # proveedor equivocado. Vacio en la config = API oficial de OpenAI.
+            self._client = OpenAI(
+                api_key=self.api_key,
+                base_url=settings.openai_base_url or "https://api.openai.com/v1",
+            )
         return self._client
 
     def analyze(self, prompt: str, schema: dict) -> dict:
@@ -110,18 +154,22 @@ class OpenAILLM(LLMProvider):
             + "\n\nResponde UNICAMENTE con un JSON valido que cumpla este JSON Schema:\n"
             + json.dumps(schema, ensure_ascii=False)
         )
-        resp = client.chat.completions.create(
-            model=self.model,
-            messages=[{"role": "user", "content": prompt_json}],
-            response_format={"type": "json_object"},
+        resp = _con_reintento(
+            lambda: client.chat.completions.create(
+                model=self.model,
+                messages=[{"role": "user", "content": prompt_json}],
+                response_format={"type": "json_object"},
+            )
         )
         return json.loads(resp.choices[0].message.content)
 
     def chat(self, system: str, messages: list[dict]) -> str:
         client = self._get_client()
-        resp = client.chat.completions.create(
-            model=self.model,
-            messages=[{"role": "system", "content": system}, *messages],
+        resp = _con_reintento(
+            lambda: client.chat.completions.create(
+                model=self.model,
+                messages=[{"role": "system", "content": system}, *messages],
+            )
         )
         return resp.choices[0].message.content or ""
 
@@ -149,18 +197,22 @@ class LocalLLM(LLMProvider):
             + "\n\nResponde UNICAMENTE con un JSON valido que cumpla este JSON Schema:\n"
             + json.dumps(schema, ensure_ascii=False)
         )
-        resp = client.chat.completions.create(
-            model=self.model,
-            messages=[{"role": "user", "content": prompt_json}],
-            response_format={"type": "json_object"},
+        resp = _con_reintento(
+            lambda: client.chat.completions.create(
+                model=self.model,
+                messages=[{"role": "user", "content": prompt_json}],
+                response_format={"type": "json_object"},
+            )
         )
         return json.loads(resp.choices[0].message.content)
 
     def chat(self, system: str, messages: list[dict]) -> str:
         client = self._get_client()
-        resp = client.chat.completions.create(
-            model=self.model,
-            messages=[{"role": "system", "content": system}, *messages],
+        resp = _con_reintento(
+            lambda: client.chat.completions.create(
+                model=self.model,
+                messages=[{"role": "system", "content": system}, *messages],
+            )
         )
         return resp.choices[0].message.content or ""
 
