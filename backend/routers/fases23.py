@@ -53,6 +53,26 @@ router = APIRouter(tags=["fases-2-3"])
 # ---------------------------------------------------------------------------
 # Pre-fase: cribado (marca que requisitos podrian tener riesgo etico)
 # ---------------------------------------------------------------------------
+
+def _fallo_proveedor(exc: Exception) -> HTTPException:
+    """Traduce un fallo del proveedor de IA a un 502 legible.
+
+    Importa porque un error NO capturado sale por el manejador de Starlette, que
+    corre por encima del middleware de CORS: la respuesta llega sin cabeceras
+    CORS y el navegador solo muestra "failed to fetch", sin el motivo.
+    """
+    nombre = type(exc).__name__
+    if "RateLimit" in nombre or "429" in str(exc):
+        return HTTPException(
+            status_code=502,
+            detail=(
+                "El proveedor de IA esta limitando las peticiones (cuota gratuita). "
+                "Espera un minuto y vuelve a intentarlo."
+            ),
+        )
+    return HTTPException(status_code=502, detail=f"Fallo del proveedor de IA ({nombre}): {exc}")
+
+
 @router.post("/proyectos/{proyecto_id}/cribado", response_model=list[RequisitoOut])
 def cribar(proyecto_id: uuid.UUID, db: Session = Depends(get_db)):
     """Pre-analisis por lote: clasifica todos los requisitos vigentes del proyecto
@@ -61,8 +81,10 @@ def cribar(proyecto_id: uuid.UUID, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Proyecto no encontrado")
     try:
         return cribar_proyecto(db, proyecto_id)
-    except RuntimeError as e:
-        raise HTTPException(status_code=502, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise _fallo_proveedor(e)
 
 
 @router.get("/proyectos/{proyecto_id}/banderas")
@@ -165,9 +187,10 @@ def analizar(requisito_id: uuid.UUID, db: Session = Depends(get_db)):
         )
     try:
         analisis = analizar_requisito(db, requisito_id)
-    except RuntimeError as e:
-        # P.ej. falta ANTHROPIC_API_KEY: error claro para el cliente.
-        raise HTTPException(status_code=502, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise _fallo_proveedor(e)
     return _analisis_out(db, analisis)
 
 
@@ -418,6 +441,8 @@ def chat_requisito(
 
     try:
         reply = get_llm_provider().chat(system, mensajes)
-    except RuntimeError as e:
-        raise HTTPException(status_code=502, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise _fallo_proveedor(e)
     return {"reply": reply}
