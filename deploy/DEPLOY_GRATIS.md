@@ -8,7 +8,7 @@ para el profesor. Alternativa a `DEPLOY.md` (DigitalOcean, ~12 USD/mes).
 | Frontend (Next.js) | **Vercel** | Hobby | gratis para este uso |
 | Backend (FastAPI) | **Render** | Free | duerme a los 15 min; 750 h/mes; 5 GB de trafico |
 | Base de datos | **Neon** | Free | 0.5 GB, pgvector incluido, no caduca |
-| LLM | **Google AI Studio (Gemini)** | Free | 250 K tokens/min |
+| LLM | **OpenAI** `gpt-4.1` | de pago | ~0,26 USD por sesion completa |
 | Embeddings | **OpenAI** `text-embedding-3-small` | de pago | ~1 centavo todo el corpus |
 
 Solo los embeddings cuestan dinero, y son centavos (ver abajo por que).
@@ -18,7 +18,12 @@ Solo los embeddings cuestan dinero, y son centavos (ver abajo por que).
 - **Neon y no el Postgres de Render**: el Postgres gratis de Render **caduca a los
   30 dias**, y este proyecto necesita la extension `pgvector`. Neon la trae y no
   expira. Los 844 fragmentos del corpus ocupan ~3,5 MB de los 500 disponibles.
-- **Gemini y no Groq**: Groq tambien es gratis y compatible con OpenAI, pero su
+- **OpenAI y no Gemini para el LLM**: Gemini free funciona (via su capa
+  compatible, `OPENAI_BASE_URL` apuntando a Google) pero da **5 peticiones por
+  minuto** y cada analisis gasta 2, asi que en una sesion real con 15 requisitos
+  se traba constantemente. gpt-4.1 cuesta ~0,03 USD por analisis y ademas
+  reproduce los resultados documentados en el Capitulo 7.
+- **Gemini y no Groq** (cuando se evaluo el camino gratis): Groq tambien es gratis y compatible con OpenAI, pero su
   limite libre es de ~12 K tokens/minuto en llama-3.3-70b. Un analisis de este
   metodo manda hasta 10 fragmentos normativos + el esquema de las tres capas +
   4096 tokens de salida, asi que se pasa del limite. Gemini da 250 K TPM.
@@ -107,8 +112,12 @@ npx -y neonctl connection-string --project-id dark-term-41870672
    `render.yaml` de la raiz.
 3. Rellena las variables marcadas como secretas:
    - `DATABASE_URL` -> la `NEON_URL` de tu `.env`
-   - `OPENAI_API_KEY` -> la API key de Gemini (para el LLM)
-   - `EMBEDDING_OPENAI_API_KEY` -> la API key de OpenAI (para los embeddings)
+   - `OPENAI_API_KEY` -> la API key de OpenAI (LLM)
+   - `EMBEDDING_OPENAI_API_KEY` -> la misma API key de OpenAI (embeddings)
+
+   > Si alguna vez apuntas el LLM a otro proveedor, **borra** `OPENAI_BASE_URL`
+   > al volver a OpenAI. Dejarla puesta manda tu clave de OpenAI al proveedor
+   > anterior y devuelve "Please pass a valid API key".
    - `CORS_ORIGINS` -> dejalo en `*` por ahora; se ajusta en el paso 5
 4. Deploy. Tarda unos minutos. Anota la URL: `https://tesis-backend.onrender.com`.
 5. Verifica: `curl https://tesis-backend.onrender.com/health` -> `"database": "ok"`.

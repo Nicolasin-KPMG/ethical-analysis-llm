@@ -32,15 +32,18 @@ services:
       - key: ACCESS_TOKEN_EXPIRE_MINUTES
         value: "720"
 
-      # --- LLM: Gemini por su capa compatible con OpenAI ---
+      # --- LLM: OpenAI ---
+      # Se probo Gemini por su capa compatible (OPENAI_BASE_URL apuntando a
+      # Google) y funciona, pero el tier gratis da 5 peticiones/minuto y un
+      # analisis gasta 2: en una sesion real se traba. Con gpt-4.1 una sesion
+      # completa cuesta ~0,26 USD y coincide con los resultados de la tesis.
+      # OPENAI_BASE_URL se deja SIN declarar a proposito: vacia = API de OpenAI.
       - key: LLM_PROVIDER
         value: openai
       - key: OPENAI_API_KEY
-        sync: false          # aqui va la API key de Google AI Studio
-      - key: OPENAI_BASE_URL
-        value: https://generativelanguage.googleapis.com/v1beta/openai/
+        sync: false          # API key de OpenAI (sk-proj-...)
       - key: OPENAI_MODEL
-        value: gemini-3.7-flash
+        value: gpt-4.1
 
       # --- Embeddings: OpenAI, NO Gemini ---
       # El tier gratis de Gemini topa en 1000 embeddings al dia y el corpus son
@@ -48,10 +51,10 @@ services:
       # y no tiene tope diario. Por eso lleva su propia credencial.
       - key: EMBEDDING_PROVIDER
         value: openai
+      # Misma clave que el LLM ahora que ambos son OpenAI; se deja separada
+      # por si vuelven a ser proveedores distintos.
       - key: EMBEDDING_OPENAI_API_KEY
-        sync: false          # aqui va la API key de OpenAI (sk-proj-...)
-      - key: EMBEDDING_OPENAI_BASE_URL
-        value: ""            # vacio = API de OpenAI
+        sync: false          # API key de OpenAI (sk-proj-...)
       - key: EMBEDDING_MODEL_OPENAI
         value: text-embedding-3-small
       - key: EMBEDDING_DIM
