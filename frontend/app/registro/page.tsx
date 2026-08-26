@@ -1,6 +1,6 @@
 "use client";
 
-// Fase 1 — Registro de requisitos.
+// Entrada del método — Registro de requisitos.
 
 import { useEffect, useState } from "react";
 import {
@@ -88,7 +88,7 @@ export default function Page() {
   return (
     <>
       <PageHeader
-        eyebrow="Fase 1"
+        eyebrow="Entrada"
         title="Registro de requisitos"
         subtitle="Registra los requisitos del proyecto. Nacen en estado “pendiente de análisis”."
       />

@@ -70,7 +70,7 @@ export default function LoginPage() {
             tus requisitos con IA.
           </h1>
           <p className="mt-4 max-w-md text-[15px] leading-relaxed text-slate-300">
-            Un método de 8 fases para decidir qué construir — y hacerlo bien.
+            Un método de seis fases para decidir qué construir — y hacerlo bien.
           </p>
           <ul className="mt-8 space-y-3">
             {FEATURES.map((f) => (

@@ -1,6 +1,6 @@
 "use client";
 
-// Barra lateral oscura con el proceso guiado de 8 fases (estética de referencia:
+// Barra lateral oscura con el proceso guiado del método (estética de referencia:
 // navy profundo + acento teal). Wordmark sobrio, sin logo recargado.
 
 import Link from "next/link";
@@ -19,13 +19,15 @@ function iniciales(nombre: string): string {
 
 const PASOS: Item[] = [
   { href: "/", paso: "•", label: "Dashboard" },
-  { href: "/registro", paso: "1", label: "Registro de requisitos" },
-  { href: "/analisis", paso: "2·3", label: "Análisis ético" },
-  { href: "/dimensiones", paso: "4", label: "Dimensiones" },
-  { href: "/evaluacion", paso: "5", label: "Evaluación" },
-  { href: "/ranking", paso: "6", label: "Ranking" },
-  { href: "/trazabilidad", paso: "7", label: "Trazabilidad" },
-  { href: "/visualizacion", paso: "8", label: "Visualización" },
+  // El método son SEIS fases entre una entrada (registro) y una salida
+  // (visualización del ranking); ver Capítulo 4 de la tesis.
+  { href: "/registro", paso: "E", label: "Registro de requisitos" },
+  { href: "/analisis", paso: "1·2", label: "Análisis y tratamiento" },
+  { href: "/dimensiones", paso: "3", label: "Dimensiones" },
+  { href: "/evaluacion", paso: "4", label: "Evaluación" },
+  { href: "/ranking", paso: "5", label: "Ranking" },
+  { href: "/trazabilidad", paso: "6", label: "Trazabilidad" },
+  { href: "/visualizacion", paso: "S", label: "Visualización" },
 ];
 
 export default function Sidebar() {

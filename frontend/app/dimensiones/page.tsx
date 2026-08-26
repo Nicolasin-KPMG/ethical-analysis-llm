@@ -1,6 +1,6 @@
 "use client";
 
-// Fase 4 — Definición dinámica de dimensiones de priorización.
+// Fase 3 — Definición dinámica de dimensiones de priorización.
 
 import { useEffect, useState } from "react";
 import {
@@ -99,9 +99,9 @@ export default function Page() {
   return (
     <>
       <PageHeader
-        eyebrow="Fase 4"
+        eyebrow="Fase 3"
         title="Dimensiones de priorización"
-        subtitle="Define los criterios generales. Beneficio y valor ético suman; costo y riesgo ético restan en el ranking. Las dimensiones éticas por requisito las detecta la IA en el análisis (Fases 2-3)."
+        subtitle="Define los criterios generales. Beneficio y valor ético suman; costo y riesgo ético restan en el ranking. Las dimensiones éticas por requisito las detecta la IA en el análisis (Fases 1 y 2)."
       />
 
       {error && <Alert>{error}</Alert>}

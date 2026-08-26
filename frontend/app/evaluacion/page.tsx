@@ -1,6 +1,6 @@
 "use client";
 
-// Fase 5 — Matriz requisitos × dimensiones. La intensidad se elige de forma
+// Fase 4 — Matriz requisitos × dimensiones. La intensidad se elige de forma
 // CUALITATIVA (palabras), pero se guarda como número 0–5 (0 = no aplica) para
 // que la fórmula del ranking no cambie.
 
@@ -110,7 +110,7 @@ export default function Page() {
   return (
     <>
       <PageHeader
-        eyebrow="Fase 5"
+        eyebrow="Fase 4"
         title="Evaluación"
         subtitle="Para cada requisito, indica con qué intensidad expresa cada dimensión: de “No aplica” a “Muy alta”. Las dimensiones éticas solo aplican a su requisito; en los demás la celda queda en “No aplica”. Se guarda al elegir."
       />
@@ -119,7 +119,7 @@ export default function Page() {
 
       {requisitos.length === 0 || dimensiones.length === 0 ? (
         <EmptyState>
-          Necesitas al menos un requisito (Fase 1) y una dimensión (Fase 4) para construir la matriz.
+          Necesitas al menos un requisito (Entrada) y una dimensión (Fase 3) para construir la matriz.
         </EmptyState>
       ) : (
         <Card className="overflow-hidden">

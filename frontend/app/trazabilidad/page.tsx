@@ -1,6 +1,6 @@
 "use client";
 
-// Fase 7 — Derivados y trazabilidad (regla de arrastre).
+// Fase 6 — Derivados y trazabilidad (regla de arrastre).
 
 import { useEffect, useState } from "react";
 import {
@@ -63,7 +63,7 @@ export default function Page() {
   return (
     <>
       <PageHeader
-        eyebrow="Fase 7"
+        eyebrow="Fase 6"
         title="Derivados y trazabilidad"
         subtitle="Relaciones origen → derivado. Regla de arrastre: un derivado obligatorio no debería quedar por debajo del requisito que mitiga."
         actions={
@@ -90,7 +90,7 @@ export default function Page() {
       )}
 
       {items.length === 0 ? (
-        <EmptyState>No hay relaciones de derivación. Se crean al “mitigar” un requisito en la Fase 3.</EmptyState>
+        <EmptyState>No hay relaciones de derivación. Se crean al “mitigar” un requisito en la Fase 2.</EmptyState>
       ) : (
         <Table
           head={

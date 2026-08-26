@@ -5,7 +5,7 @@ import AppShell from "../components/AppShell";
 
 export const metadata: Metadata = {
   title: "Gestión ética de requisitos",
-  description: "Método de 8 fases para la gestión ética y priorización de requisitos",
+  description: "Método de seis fases para la gestión ética y priorización de requisitos",
 };
 
 export default function RootLayout({

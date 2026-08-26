@@ -46,7 +46,7 @@ export default function Page() {
       <PageHeader
         eyebrow="Dashboard"
         title="Dashboard del proyecto"
-        subtitle="Estado de los requisitos, bandera ética y avance del proceso de 8 fases."
+        subtitle="Estado de los requisitos, bandera ética y avance del proceso de seis fases."
       />
 
       {/* Métricas */}

@@ -1,6 +1,6 @@
 "use client";
 
-// Fase 6 — Ranking (cálculo en vivo, determinista, sin IA).
+// Fase 5 — Ranking (cálculo en vivo, determinista, sin IA).
 
 import { Fragment, useEffect, useState } from "react";
 import { RankingItem, obtenerRanking, guardarSnapshot } from "../../lib/api";
@@ -48,7 +48,7 @@ export default function Page() {
   return (
     <>
       <PageHeader
-        eyebrow="Fase 6"
+        eyebrow="Fase 5"
         title="Ranking"
         subtitle="Puntaje = beneficio + valor ético − costo − riesgo ético. Cálculo en vivo, determinista, sin IA."
         actions={

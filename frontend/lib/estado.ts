@@ -32,7 +32,7 @@ export function tipoBadge(tipo?: string | null): { label: string; tone: Tone } {
   }
 }
 
-// Bandera ÉTICA real (derivada del análisis), para el dashboard y la Fase 8.
+// Bandera ÉTICA real (derivada del análisis), para el dashboard y la salida del método.
 export function banderaEtica(
   b?: string | null,
 ): { label: string; tone: DotTone } {
@@ -48,7 +48,7 @@ export function banderaEtica(
   }
 }
 
-// "Bandera" del dashboard derivada del estado (la ética fina llega con Fases 2-3).
+// "Bandera" del dashboard derivada del estado (la ética fina llega con las Fases 1 y 2).
 export function banderaEstado(estado?: string | null): { label: string; tone: DotTone } {
   switch (estado) {
     case "eliminado":

@@ -36,7 +36,7 @@ function authHeaders(extra?: HeadersInit): HeadersInit {
   };
 }
 
-// --- Tipos que reflejan los esquemas del backend (Fase 1) ---
+// --- Tipos que reflejan los esquemas del backend (Entrada) ---
 
 export type Proyecto = {
   id: string;
@@ -70,7 +70,7 @@ export type RequisitoInput = {
   stakeholder?: string;
 };
 
-// Tipos de dimension (Fase 4). Los dos primeros suman; los dos ultimos restan.
+// Tipos de dimension (Fase 3). Los dos primeros suman; los dos ultimos restan.
 export type TipoDimension =
   | "beneficio"
   | "valor_etico"
@@ -134,8 +134,8 @@ export type RankingOut = {
   items: RankingItem[];
 };
 
-// Bandera ética (Fase 8). Por ahora siempre "sin_analisis" (placeholder gris)
-// hasta implementar el análisis ético de las Fases 2-3.
+// Bandera ética (salida del método). Por ahora siempre "sin_analisis" (placeholder gris)
+// hasta implementar el análisis ético de las Fases 1 y 2.
 export type BanderaEtica = "verde" | "amarilla" | "roja" | "sin_analisis";
 
 export type VisualizacionItem = RankingItem & {
@@ -193,7 +193,7 @@ export const crearProyecto = (data: { nombre: string; descripcion?: string }) =>
     body: JSON.stringify(data),
   });
 
-// --- Requisitos (Fase 1) ---
+// --- Requisitos (Entrada) ---
 
 export const listarRequisitos = (proyectoId: string) =>
   request<Requisito[]>(`/proyectos/${proyectoId}/requisitos`);
@@ -210,7 +210,7 @@ export const editarRequisito = (requisitoId: string, data: RequisitoInput) =>
     body: JSON.stringify(data),
   });
 
-// --- Dimensiones (Fase 4) ---
+// --- Dimensiones (Fase 3) ---
 
 export const listarDimensiones = (proyectoId: string) =>
   request<Dimension[]>(`/proyectos/${proyectoId}/dimensiones`);
@@ -239,7 +239,7 @@ export const eliminarDimension = (dimensionId: string) =>
     if (!res.ok) throw new Error(`Error ${res.status}`);
   });
 
-// --- Evaluaciones (Fase 5) ---
+// --- Evaluaciones (Fase 4) ---
 
 export const listarEvaluaciones = (proyectoId: string) =>
   request<Evaluacion[]>(`/proyectos/${proyectoId}/evaluaciones`);
@@ -258,7 +258,7 @@ export const guardarEvaluacion = (
     body: JSON.stringify(data),
   });
 
-// --- Ranking (Fase 6) ---
+// --- Ranking (Fase 5) ---
 
 export const obtenerRanking = (proyectoId: string) =>
   request<RankingOut>(`/proyectos/${proyectoId}/ranking`);
@@ -268,7 +268,7 @@ export const guardarSnapshot = (proyectoId: string) =>
     method: "POST",
   });
 
-// --- Visualización (Fase 8) ---
+// --- Visualización (salida) ---
 
 export const obtenerVisualizacion = (proyectoId: string) =>
   request<VisualizacionOut>(`/proyectos/${proyectoId}/visualizacion`);
@@ -310,7 +310,7 @@ export const configurarNormasActivas = (
     body: JSON.stringify({ documento_ids: documentoIds }),
   });
 
-// --- Fases 2-3: análisis ético y tratamiento (M5) ---
+// --- Fases 1-2: análisis ético y tratamiento (M5) ---
 
 export type Cita = {
   chunk_id?: string | null;
@@ -426,7 +426,7 @@ export const crearTratamiento = (
     body: JSON.stringify(data),
   });
 
-// --- Fase 7: trazabilidad de derivados (M6) ---
+// --- Fase 6: trazabilidad de derivados (M6) ---
 
 export type TrazabilidadItem = {
   relacion_id: string;

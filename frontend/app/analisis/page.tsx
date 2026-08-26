@@ -1,6 +1,6 @@
 "use client";
 
-// Fases 2-3 — Análisis ético (LLM + RAG) y tratamiento.
+// Fases 1-2 — Identificación de temas éticos (LLM + RAG) y tratamiento.
 // El LLM identifica, analiza y propone; el humano edita y decide. Re-análisis manual.
 
 import { useEffect, useRef, useState } from "react";
@@ -271,7 +271,7 @@ export default function Page() {
   return (
     <>
       <PageHeader
-        eyebrow="Fases 2 y 3"
+        eyebrow="Fases 1 y 2"
         title="Análisis ético y tratamiento"
         subtitle="El LLM identifica, analiza y propone; tú editas y decides. El re-análisis es manual."
         actions={
@@ -540,7 +540,7 @@ export default function Page() {
                     </CardBody>
                   </Card>
 
-                  {/* Dimensiones éticas detectadas (Fase 4 asistida) */}
+                  {/* Dimensiones éticas detectadas (Fase 3 asistida) */}
                   <Card>
                     <CardBody>
                       <h3 className="font-semibold text-slate-900">Dimensiones éticas detectadas</h3>
@@ -709,7 +709,7 @@ export default function Page() {
                   {/* Tratamiento */}
                   <Card>
                     <CardBody>
-                      <h3 className="mb-3 font-semibold text-slate-900">Tratamiento (Fase 3)</h3>
+                      <h3 className="mb-3 font-semibold text-slate-900">Tratamiento (Fase 2)</h3>
                       <div className="flex items-center gap-2">
                         <label className="text-sm text-slate-600">Decisión:</label>
                         <select className="field-sm" value={decision} onChange={(e) => setDecision(e.target.value as Decision)}>

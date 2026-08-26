@@ -1,6 +1,6 @@
 "use client";
 
-// Fase 8 — Visualización del ranking (auditable) + bandera ética + export CSV.
+// Salida del método — Visualización del ranking (auditable) + bandera ética + export CSV.
 
 import { useEffect, useState } from "react";
 import { VisualizacionItem, BanderaEtica, obtenerVisualizacion, descargarConAuth } from "../../lib/api";
@@ -29,7 +29,7 @@ export default function Page() {
   return (
     <>
       <PageHeader
-        eyebrow="Fase 8"
+        eyebrow="Salida"
         title="Visualización del ranking"
         subtitle="Ranking ordenado y auditable, con desglose por requisito. La bandera ética informa, no bloquea."
         actions={
