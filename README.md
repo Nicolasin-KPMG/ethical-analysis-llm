@@ -1,135 +1,149 @@
-# Gestión ética y priorización de requisitos (Tesis)
+# Gestión ética y priorización de requisitos
 
-Herramienta web que sistematiza un método de 8 fases para gestionar las
-implicancias éticas de los requisitos de un proyecto de software con IA y
-priorizarlos. Ver [contexto_construccion_app.md](contexto_construccion_app.md).
+Herramienta web que sistematiza un **método de seis fases** para detectar las
+implicancias éticas de los requisitos de un proyecto de software con IA,
+decidir cómo tratarlas y priorizarlos equilibrando valor y riesgo.
 
-Estado actual: **todos los hitos M0–M6 implementados**: setup, Fase 1, Fases 4-6
-(priorización determinista), Fase 8 (visualización + CSV), RAG a mano, Fases 2-3
-(análisis ético con LLM + RAG, las tres capas, y tratamiento) y Fase 7 (derivados,
-trazabilidad con regla de arrastre y exportación del proyecto en JSON).
+Desarrollada como parte de una tesis de magíster. El análisis ético se apoya en
+un LLM con **RAG sobre un corpus normativo real** (EU AI Act, GDPR, NIST AI RMF
+y las leyes chilenas 19.628 y 20.609), de modo que las citas que devuelve son
+artículos existentes y no texto generado.
 
-Para correr el análisis real de las Fases 2-3 hace falta `ANTHROPIC_API_KEY`
-(LLM) y, para las citas normativas, un proveedor de embeddings activo + corpus
-ingerido; sin embeddings el análisis corre igual pero sin citas y con confianza
-baja. La bandera ética de la Fase 8 sigue como placeholder gris (se conectará al
-análisis en una iteración posterior).
+## El método
 
-El RAG (M4) está completo a nivel de código y verificado offline (chunking por
-estructura legal + almacenamiento y búsqueda en pgvector). Para generar vectores
-reales necesita un proveedor de embeddings activo (Voyage con API key, u Ollama
-local) y los documentos normativos en texto; ver [backend/datos/](backend/datos/).
+El proceso va de una entrada a una salida, y la salida de cada fase es la
+entrada de la siguiente:
+
+| Paso | Pantalla | Qué hace |
+|---|---|---|
+| **Entrada** | `/registro` | Registro de los requisitos del proyecto |
+| **Fase 1** | `/analisis` | Identificación de temas éticos (LLM + RAG, tres capas) |
+| **Fase 2** | `/analisis` | Tratamiento: reformular, mitigar, eliminar o aceptar |
+| **Fase 3** | `/dimensiones` | Definición de dimensiones de priorización y sus pesos |
+| **Fase 4** | `/evaluacion` | Matriz de requisitos × dimensiones |
+| **Fase 5** | `/ranking` | Cálculo del ranking (determinista, sin IA) |
+| **Fase 6** | `/trazabilidad` | Trazabilidad de derivados y regla de arrastre |
+| **Salida** | `/visualizacion` | Ranking auditable con desglose y export CSV |
+
+Puntaje = beneficio + valor ético − costo − riesgo ético. Solo entran los
+requisitos vigentes y no eliminados.
 
 ## Stack
 
-- **Frontend:** Next.js + TypeScript + Tailwind
-- **Backend:** Python + FastAPI
+- **Frontend:** Next.js (App Router) + TypeScript + Tailwind
+- **Backend:** Python + FastAPI, autenticación con JWT
 - **Base de datos:** PostgreSQL + pgvector
-- **Orquestación:** docker-compose
+- **LLM y embeddings:** proveedores enchufables (OpenAI, Anthropic, o cualquier
+  endpoint compatible con OpenAI: Gemini, Groq, Ollama...)
+- **Local:** docker-compose
 
-## Estructura
-
-```
-/frontend            # Next.js (App Router)
-/backend
-  /providers         # capa enchufable: llm.py, embeddings.py
-  /rag               # ingest.py, store.py, retrieve.py (stubs, M4)
-  /models            # tablas SQLAlchemy (modelo de datos completo)
-  /schemas           # Pydantic
-  /services          # ranking.py, analysis.py (stubs, M2/M5)
-  /routers           # un router por grupo de fases
-  /alembic           # migraciones
-  main.py
-/docker-compose.yml
-/.env.example
-```
-
-## Cómo levantar todo en local
+## Correr en local
 
 Requisitos: Docker y Docker Compose.
 
 ```bash
-# 1. Copia las variables de entorno (puedes dejar los valores por defecto).
-cp .env.example .env
-
-# 2. Levanta base de datos + backend + frontend.
+cp .env.example .env     # ajusta al menos OPENAI_API_KEY
 docker compose up --build
 ```
 
-Al arrancar, el backend espera a PostgreSQL y aplica las migraciones de Alembic
-automáticamente (crea el esquema completo, incluidas las extensiones pgcrypto y
-pgvector).
+El backend espera a PostgreSQL y aplica las migraciones de Alembic solo (crea el
+esquema y las extensiones `pgcrypto` y `pgvector`).
 
-Servicios:
+| Servicio | URL |
+|---|---|
+| Frontend | http://localhost:3001 |
+| API | http://localhost:8001 |
+| Swagger | http://localhost:8001/docs |
+| Healthcheck | http://localhost:8001/health |
 
-- Frontend: http://localhost:3000
-- Backend (API): http://localhost:8000
-- Documentación interactiva (Swagger): http://localhost:8000/docs
-- Healthcheck: http://localhost:8000/health
+> Los puertos van remapeados (3001 y 8001) para no chocar con servicios que
+> suelen ocupar el 3000 y el 8000.
 
-## Verificar que la Fase 1 funciona
-
-### Opción A — desde la interfaz (http://localhost:3000)
-
-1. En la sección **Proyecto**, escribe un nombre y pulsa **Crear proyecto**.
-2. En **Nuevo requisito**, completa al menos *Nombre* (y opcionalmente código,
-   descripción, tipo y stakeholder) y pulsa **Registrar requisito**.
-3. El requisito aparece en la tabla con estado **pendiente_de_analisis**.
-4. Pulsa **Editar** en una fila, cambia algún campo y **Guardar cambios**: la
-   tabla se actualiza.
-
-### Verificar M2 (Fases 4, 5 y 6) en la interfaz
-
-1. **Fase 4 · Dimensiones:** agrega al menos una dimensión de tipo *beneficio*
-   (suma) y una de tipo *costo* (resta), cada una con peso 1–5.
-2. **Fase 5 · Evaluación:** en la matriz, asigna a cada requisito una fuerza
-   0–5 por dimensión (se guarda al salir de la celda).
-3. **Fase 6 · Ranking:** ve el puntaje final y el desglose, ordenado de mayor a
-   menor. Puntaje = beneficio + valor ético − costo − riesgo ético residual.
-   Pulsa **Guardar snapshot** para archivar una foto del ranking.
-
-Reglas respetadas: solo los requisitos vigentes y no eliminados se evalúan y
-entran al ranking; el ranking es 100% determinista (sin IA).
-
-### Opción B — desde la API (http://localhost:8001/docs o curl)
+### Datos de prueba
 
 ```bash
-# Healthcheck
-curl http://localhost:8000/health
-
-# Crear un proyecto
-curl -X POST http://localhost:8000/proyectos \
-  -H "Content-Type: application/json" \
-  -d '{"nombre":"Proyecto demo"}'
-
-# (usa el id devuelto)
-PID=<id-del-proyecto>
-
-# Crear un requisito
-curl -X POST http://localhost:8000/proyectos/$PID/requisitos \
-  -H "Content-Type: application/json" \
-  -d '{"codigo":"REQ-001","nombre":"Login con reconocimiento facial","tipo":"funcional","stakeholder":"Usuarios"}'
-
-# Listar requisitos del proyecto
-curl http://localhost:8000/proyectos/$PID/requisitos
+API_URL=http://localhost:8001 python3 backend/seed_demo.py
 ```
 
-## Capa de proveedores (enchufable)
+Crea el usuario `demo@example.com` / `demo1234` con un proyecto de ejemplo,
+sus dimensiones, diez requisitos y la matriz de evaluación completa.
 
-El cambio de proveedor de LLM o embeddings es sólo cambiar variables en `.env`:
+### Corpus normativo
 
-- `LLM_PROVIDER=anthropic|local`
-- `EMBEDDING_PROVIDER=hosted|local`
+Los documentos en texto están versionados en [backend/datos/](backend/datos/).
+Para indexarlos (hace falta un proveedor de embeddings activo):
 
-Las implementaciones locales y el análisis con LLM están como *stub* en M0/M1;
-se completan en M4 (RAG) y M5 (Fases 2-3).
+```bash
+docker compose exec backend python -m rag.ingest \
+  --archivo /app/datos/GDPR.txt --nombre "GDPR" \
+  --jurisdiccion UE --tema "Protección de datos"
+```
+
+La ingesta es reanudable: omite los documentos ya cargados, y `--forzar` los
+reindexa. Al cambiar de modelo de embeddings hay que reindexar **todo**, porque
+los vectores de modelos distintos no son comparables y la búsqueda no filtra por
+modelo.
+
+## Despliegue
+
+La app está pensada para correr repartida: frontend en **Vercel**, backend en
+**Render** y base de datos en **Neon**. El runbook completo, con las variables
+de entorno de cada servicio, está en
+[deploy/DEPLOY_GRATIS.md](deploy/DEPLOY_GRATIS.md); [render.yaml](render.yaml)
+trae el blueprint del backend.
+
+Existe también un runbook para servidor propio con Docker y HTTPS en
+[deploy/DEPLOY.md](deploy/DEPLOY.md).
+
+## Proveedores de IA
+
+Cambiar de proveedor es cambiar variables de entorno, sin tocar código:
+
+| Variable | Para qué |
+|---|---|
+| `LLM_PROVIDER` | `openai` \| `anthropic` \| `local` |
+| `OPENAI_MODEL` | modelo del análisis (la tesis usa `gpt-4.1`) |
+| `OPENAI_BASE_URL` | vacío = OpenAI; si se llena, cualquier API compatible |
+| `EMBEDDING_MODEL_OPENAI` | modelo de embeddings (`text-embedding-3-small`) |
+| `EMBEDDING_OPENAI_API_KEY` | credencial propia si LLM y embeddings son de proveedores distintos |
+| `EMBEDDING_DIM` | debe coincidir con la columna `VECTOR` del esquema (1024) |
+| `EMBEDDING_RPM` | freno por minuto, para proveedores con cuota (0 = sin límite) |
+
+Para validar un proveedor nuevo antes de desplegar:
+
+```bash
+docker compose run --rm --no-deps backend python probar_proveedor.py
+```
+
+Comprueba las dos cosas que suelen romperse al cambiar: que el modelo respete
+la salida JSON estructurada y que los embeddings tengan las dimensiones
+esperadas.
+
+## Estructura
+
+```
+/frontend                # Next.js (App Router)
+  /app                   # una ruta por paso del método
+  /components            # sistema de diseño y layout
+  /lib                   # cliente de la API y mapeos de estado
+/backend
+  /providers             # capa enchufable: llm.py, embeddings.py
+  /rag                   # ingest.py, store.py, retrieve.py
+  /models                # tablas SQLAlchemy
+  /schemas               # Pydantic (incluye las tres capas del análisis)
+  /services              # analysis.py, ranking.py, cribado.py, auth.py
+  /routers               # un router por grupo de fases
+  /alembic               # migraciones
+  /datos                 # corpus normativo en texto
+/deploy                  # runbooks y scripts de despliegue
+```
 
 ## Migraciones
 
 ```bash
-# Generar una nueva migración tras cambiar los modelos
+# Tras cambiar los modelos
 docker compose exec backend alembic revision --autogenerate -m "mensaje"
 
-# Aplicar migraciones manualmente
+# Aplicar
 docker compose exec backend alembic upgrade head
 ```
