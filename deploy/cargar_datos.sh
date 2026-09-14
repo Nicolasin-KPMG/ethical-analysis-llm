@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 # ==========================================================================
-# Carga de datos de la demo, para correr UNA VEZ en el servidor después de
-# `docker compose up -d` y de haber copiado los .txt a backend/datos/.
+# Carga inicial de datos, para correr UNA VEZ con `docker compose` ya levantado.
+# Sirve igual en local y en un servidor propio (los .txt normativos ya vienen en
+# el repo). Para el despliegue Vercel+Render+Neon, usa cargar_datos_remoto.sh.
 #
-#   1) Ingesta los 5 documentos normativos al RAG (embeddings con Voyage).
+#   1) Ingesta los 5 documentos normativos al RAG (con el proveedor de
+#      embeddings que tengas configurado en el .env).
 #   2) Crea el usuario demo + proyecto + datos de ejemplo (seed).
 #
 # Uso:  bash deploy/cargar_datos.sh
@@ -38,6 +40,8 @@ docker compose exec -T -e API_URL=http://localhost:8000 backend python seed_demo
 
 echo ""
 echo "======================================================================"
-echo " LISTO. Entra desde el navegador:  http://TU_IP_PUBLICA:3001"
+echo " LISTO. Entra desde el navegador:
+   - en local:         http://localhost:3001
+   - servidor propio:  http://TU_IP_PUBLICA:3001"
 echo " Usuario demo:  demo@example.com   /   demo1234"
 echo "======================================================================"

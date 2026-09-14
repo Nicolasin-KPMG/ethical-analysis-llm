@@ -8,7 +8,7 @@
 #       asi no hay que instalar Python ni las dependencias fuera de Docker.)
 #   2) Crea el usuario/proyecto demo llamando a la API publica de Render.
 #
-# NEON_URL y GEMINI_KEY se leen del .env (donde ya estan guardadas).
+# NEON_URL y OPENAI_API_KEY se leen del .env.
 # API_URL hay que pasarla: es la URL publica del backend en Render.
 #
 # Uso:
@@ -22,10 +22,9 @@ cd "$(dirname "$0")/.."
 del_env () { grep -E "^$1=" .env 2>/dev/null | head -1 | cut -d= -f2- | tr -d '"'"'"' \r'; }
 
 NEON_URL="${NEON_URL:-$(del_env NEON_URL)}"
-# Embeddings por OpenAI y no por Gemini: el tier gratis de Gemini topa en 1000
-# embeddings AL DIA y el corpus son 844, asi que una sola reindexacion agota la
-# cuota. text-embedding-3-small cuesta ~1 centavo por todo el corpus y no tiene
-# tope diario. El LLM sigue siendo Gemini (gratis): son piezas independientes.
+# Embeddings por OpenAI: text-embedding-3-small cuesta ~1 centavo por todo el
+# corpus y no tiene tope diario (el tier gratis de Gemini topa en 1000 al dia y
+# el corpus son 844 fragmentos: no alcanza ni para una reindexacion).
 OPENAI_KEY="${OPENAI_KEY:-$(del_env OPENAI_API_KEY)}"
 
 : "${NEON_URL:?Falta NEON_URL (ponla en el .env)}"

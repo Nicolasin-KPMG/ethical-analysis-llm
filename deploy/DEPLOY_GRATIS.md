@@ -1,7 +1,8 @@
-# Despliegue gratuito (para que el profesor use la app)
+# Despliegue de bajo coste (para que otra persona use la app)
 
-Objetivo: dejar la app en una URL publica, **sin coste**, con cuentas propias
-para el profesor. Alternativa a `DEPLOY.md` (DigitalOcean, ~12 USD/mes).
+Objetivo: dejar la app en una URL publica usando solo planes gratuitos de
+infraestructura; lo unico que se paga es el consumo del LLM (centavos por
+sesion). Alternativa a `DEPLOY.md` (servidor propio, ~12 USD/mes).
 
 | Pieza | Servicio | Plan | Limite relevante |
 |---|---|---|---|
@@ -32,9 +33,10 @@ Solo los embeddings cuestan dinero, y son centavos (ver abajo por que).
   y ninguna reindexacion; cualquier reintento agota la cuota del dia (lo
   comprobamos en carne propia). `text-embedding-3-small` cuesta ~1 centavo por
   todo el corpus, no tiene tope diario y acepta `dimensions=1024`.
-- **Cada pieza con su credencial**: el LLM usa `OPENAI_API_KEY` (con la clave de
-  Gemini) y los embeddings usan `EMBEDDING_OPENAI_API_KEY` (la de OpenAI). Son
-  proveedores distintos, asi que no pueden compartir variable.
+- **Cada pieza con su credencial**: el LLM usa `OPENAI_API_KEY` y los embeddings
+  `EMBEDDING_OPENAI_API_KEY`. Hoy ambas llevan la misma clave de OpenAI, pero se
+  mantienen separadas para poder mover una de las dos piezas a otro proveedor
+  sin tocar codigo.
 - **El corpus no se puede mezclar**: los vectores de dos modelos distintos no son
   comparables y la busqueda **no filtra por modelo**, asi que un corpus a medias
   devuelve citas malas sin dar error. Al cambiar de modelo hay que reindexar
@@ -48,19 +50,21 @@ Solo los embeddings cuestan dinero, y son centavos (ver abajo por que).
 
 ## Dos advertencias antes de empezar
 
-1. **Los resultados no seran identicos a los del Capitulo 7.** Esos se generaron
-   con `gpt-4.1`. Gemini 2.5 Flash es otro modelo: los temas eticos y las citas
-   pueden variar. Si necesitas que el profe vea exactamente lo documentado,
-   siembra los analisis ya generados en vez de recalcularlos en vivo.
-2. **En el tier gratis de Gemini, Google usa los prompts y respuestas para
-   mejorar sus productos.** Aqui solo se mandan requisitos de ejemplo y normativa
-   publica, pero convendria no cargar datos reales de terceros.
+1. **Para reproducir el Capitulo 7 hay que quedarse en `gpt-4.1`.** Es el modelo
+   con el que se generaron esos resultados. Con otro modelo los temas eticos y
+   las citas varian; si hace falta mostrar exactamente lo documentado, conviene
+   sembrar los analisis ya generados en vez de recalcularlos en vivo.
+2. **Revisa la politica de datos del proveedor que uses.** Aqui solo se mandan
+   requisitos de ejemplo y normativa publica, pero en los tiers gratuitos de
+   algunos proveedores (Gemini, entre otros) los prompts se usan para entrenar,
+   asi que no conviene cargar datos reales de terceros.
 
 ---
 
-## Paso 0 — Validar Gemini antes de desplegar
+## Paso 0 (opcional) — Validar un proveedor alternativo
 
-Esto ahorra depurar en produccion. Saca la API key en
+Solo si quieres apartarte de OpenAI. Valida el proveedor **antes** de desplegar
+y te ahorras depurar en produccion. Para Gemini: saca la API key en
 <https://aistudio.google.com/apikey>, pegala en el `.env` en la linea
 `GEMINI_API_KEY=` y corre:
 
@@ -94,15 +98,24 @@ curl -s -H "Authorization: Bearer $GEMINI_API_KEY" \
 
 ## Paso 1 — Base de datos en Neon
 
-Ya esta hecho: proyecto **TesisLLM** (`dark-term-41870672`), **Postgres 16**,
-region **us-east-2**, con las migraciones aplicadas. La cadena de conexion quedo
-guardada en el `.env` como `NEON_URL` (no pisa el `DATABASE_URL` local, que sigue
-apuntando al Postgres de Docker).
+En <https://neon.tech>: **New project**, **Postgres 16**, region **us-east-2
+(Ohio)** — la misma que el backend en Render, para que cada consulta no cruce el
+pais. No hay que instalar `pgvector` a mano: la migracion `0001` crea la
+extension al aplicarse (paso 4).
 
-Si necesitas recuperarla:
+Copia la cadena de conexion (termina en `?sslmode=require`) y guardala en tu
+`.env` como `NEON_URL`. Es una variable aparte a proposito: **no pisa** el
+`DATABASE_URL` local, que sigue apuntando al Postgres de Docker. La lee
+`deploy/cargar_datos_remoto.sh`.
+
+```
+NEON_URL=postgresql://USUARIO:CLAVE@HOST.neon.tech/neondb?sslmode=require
+```
+
+Si ya tienes el proyecto creado y solo necesitas recuperar la cadena:
 
 ```bash
-npx -y neonctl connection-string --project-id dark-term-41870672
+npx -y neonctl connection-string --project-id TU_PROJECT_ID
 ```
 
 ## Paso 2 — Backend en Render
@@ -182,9 +195,10 @@ cargar. Dos formas de suavizarlo:
 
 ## Coste real
 
-0 USD, siempre que no se pasen los limites gratis. Los puntos de riesgo son las
-750 h/mes de Render (solo si lo mantienes despierto todo el mes) y los 250 K
-tokens/minuto de Gemini (irrelevante con un usuario a la vez).
+La infraestructura (Vercel + Render + Neon) es 0 USD. Lo unico que se paga es
+OpenAI: ~1 centavo por indexar todo el corpus, una sola vez, y ~0,26 USD por una
+sesion completa de analisis. El unico limite con riesgo de tocarse son las
+750 h/mes de Render, y solo si mantienes la instancia despierta todo el mes.
 
 ## Si algo falla
 

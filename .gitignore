@@ -1,5 +1,7 @@
-# Entorno
+# Entorno: ningun .env se versiona salvo el ejemplo.
 .env
+.env.*
+!.env.example
 
 # Python
 __pycache__/
@@ -15,9 +17,30 @@ npm-debug.log*
 # Datos locales
 pgdata/
 
+# Herramientas de desarrollo (no son parte del proyecto)
+.claude/
+.agents/
+skills-lock.json
+
 # Documento de contexto (work in progress, se versiona aparte por ahora)
 contexto_construccion_app.md
 
 # Corpus normativo: los PDF (pesados) no se versionan; los .txt SÍ, porque son
 # los que ingesta el RAG y así el despliegue no necesita copiarlos aparte.
 backend/datos/*.pdf
+
+# Documentos de la tesis (borradores, figuras, capturas). Este repo es la
+# herramienta, no el manuscrito: se trabajan fuera de git.
+*.docx
+*.pptx
+/*.pdf
+/*.png
+Capturas_*/
+Fotos*/
+
+# Salidas generadas por los scripts de /experimentacion
+experimentacion/*.pdf
+experimentacion/*.docx
+
+# Windows / WSL
+*:Zone.Identifier

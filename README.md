@@ -39,15 +39,41 @@ requisitos vigentes y no eliminados.
 
 ## Correr en local
 
-Requisitos: Docker y Docker Compose.
+Necesitas **Docker con Docker Compose** y una **API key de OpenAI** (la misma
+clave cubre el LLM y los embeddings; indexar todo el corpus cuesta ~1 centavo y
+una sesión de análisis ~0,26 USD). Si prefieres no gastar nada, más abajo está
+la alternativa 100% local con Ollama.
+
+**1. Configura el entorno.** Copia el ejemplo y rellena `OPENAI_API_KEY`; el
+resto de valores ya vienen puestos:
 
 ```bash
-cp .env.example .env     # ajusta al menos OPENAI_API_KEY
+cp .env.example .env
+```
+
+**2. Levanta los tres servicios** (base de datos, backend y frontend):
+
+```bash
 docker compose up --build
 ```
 
 El backend espera a PostgreSQL y aplica las migraciones de Alembic solo (crea el
-esquema y las extensiones `pgcrypto` y `pgvector`).
+esquema y las extensiones `pgcrypto` y `pgvector`). La primera vez tarda unos
+minutos construyendo las imágenes.
+
+**3. Carga el corpus normativo y los datos de ejemplo**, en otra terminal y con
+lo anterior corriendo:
+
+```bash
+bash deploy/cargar_datos.sh
+```
+
+Esto indexa los cinco documentos normativos en el RAG (más de 800 fragmentos;
+tarda varios minutos) y crea el usuario demo. **El paso no es opcional:** sin
+corpus indexado, el análisis de la Fase 1 no tiene normativa que citar.
+
+**4. Entra** a <http://localhost:3001> con `demo@example.com` / `demo1234`, o
+crea tu propia cuenta con "Crear cuenta" en la pantalla de acceso.
 
 | Servicio | URL |
 |---|---|
@@ -56,22 +82,23 @@ esquema y las extensiones `pgcrypto` y `pgvector`).
 | Swagger | http://localhost:8001/docs |
 | Healthcheck | http://localhost:8001/health |
 
-> Los puertos van remapeados (3001 y 8001) para no chocar con servicios que
-> suelen ocupar el 3000 y el 8000.
+> Los puertos van remapeados (3001, 8001 y 5433 para Postgres) para no chocar
+> con servicios que suelen ocupar el 3000, el 8000 y el 5432.
 
-### Datos de prueba
+### Sobre los datos de ejemplo
+
+El seed crea el usuario `demo@example.com` / `demo1234` con un proyecto de
+ejemplo, sus dimensiones, diez requisitos y la matriz de evaluación completa.
+`cargar_datos.sh` ya lo ejecuta; para volver a correrlo solo:
 
 ```bash
 API_URL=http://localhost:8001 python3 backend/seed_demo.py
 ```
 
-Crea el usuario `demo@example.com` / `demo1234` con un proyecto de ejemplo,
-sus dimensiones, diez requisitos y la matriz de evaluación completa.
+### Sobre el corpus normativo
 
-### Corpus normativo
-
-Los documentos en texto están versionados en [backend/datos/](backend/datos/).
-Para indexarlos (hace falta un proveedor de embeddings activo):
+Los documentos en texto están versionados en [backend/datos/](backend/datos/) —
+los PDF originales no, por peso. Para indexar uno suelto:
 
 ```bash
 docker compose exec backend python -m rag.ingest \
@@ -83,6 +110,18 @@ La ingesta es reanudable: omite los documentos ya cargados, y `--forzar` los
 reindexa. Al cambiar de modelo de embeddings hay que reindexar **todo**, porque
 los vectores de modelos distintos no son comparables y la búsqueda no filtra por
 modelo.
+
+### Sin gastar en APIs
+
+Se puede correr entero en local con [Ollama](https://ollama.com) en el host:
+
+```bash
+ollama pull llama3.1:8b && ollama pull bge-m3
+```
+
+y en el `.env`: `LLM_PROVIDER=local` y `EMBEDDING_PROVIDER=local`. Funciona, pero
+la calidad del análisis ético baja bastante respecto a `gpt-4.1`, que es el
+modelo con el que se generaron los resultados de la tesis.
 
 ## Despliegue
 
@@ -136,6 +175,7 @@ esperadas.
   /alembic               # migraciones
   /datos                 # corpus normativo en texto
 /deploy                  # runbooks y scripts de despliegue
+/experimentacion         # material de la sesión de validación con usuarios
 ```
 
 ## Migraciones
@@ -147,3 +187,22 @@ docker compose exec backend alembic revision --autogenerate -m "mensaje"
 # Aplicar
 docker compose exec backend alembic upgrade head
 ```
+
+## Si algo falla
+
+- **El análisis devuelve un error del proveedor (502)** → casi siempre la API key:
+  revisa `OPENAI_API_KEY` y que `OPENAI_BASE_URL` esté **vacía** si usas OpenAI.
+  Dejarla apuntando a otro proveedor manda tu clave ahí y devuelve
+  "Please pass a valid API key".
+- **El análisis no cita ninguna norma** → falta indexar el corpus:
+  `bash deploy/cargar_datos.sh`.
+- **La ingesta falla por dimensiones** → `EMBEDDING_DIM` tiene que coincidir con
+  el modelo de embeddings y con la columna `VECTOR(1024)` del esquema.
+- **El frontend carga pero no trae datos** → `NEXT_PUBLIC_API_URL` mal puesta, o
+  `CORS_ORIGINS` no incluye el dominio del frontend. En la consola del navegador
+  el error de CORS sale explícito. Ojo: `NEXT_PUBLIC_*` se incrusta en tiempo de
+  build, así que al cambiarla hay que reconstruir el frontend.
+- **Los puertos están ocupados** → se remapean en [docker-compose.yml](docker-compose.yml).
+- **Empezar de cero** → `docker compose down -v` borra el volumen de la base, y
+  hay que volver a correr el paso 3.
+- **Ver los logs** → `docker compose logs -f backend`.
